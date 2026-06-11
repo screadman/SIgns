@@ -14,3 +14,13 @@ Signs bridges that gap by offering a mobile-first learning experience built arou
 The goal: make sign language as easy to start learning as any spoken language.
 
 # Features 
+- Sign Dictionary:
+    - Search signs by keyword or browse by category
+    - Detailed descriptions of hand shape, movement, and placement
+    - Favorites system to save signs for quick review
+
+- Interactive Lessons:
+    - Progressive lesson paths organized by difficulty
+    - Multiple exercise types: recognition, matching, and recall
+    - Progress tracking
+    - Completion streaks to keep learners motivated
