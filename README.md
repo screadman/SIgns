@@ -24,3 +24,19 @@ The goal: make sign language as easy to start learning as any spoken language.
     - Multiple exercise types: recognition, matching, and recall
     - Progress tracking
     - Completion streaks to keep learners motivated
+
+# tech stack 
+
+Mobile App              React Native
+Navigation              React Navigation
+State Management        Zustand 
+Backend / API           Node.js
+Database                PostgreSQL 
+
+Why React Native?
+We chose React Native to ship a single codebase to both iOS and Android, letting a two-person team move fast without sacrificing native performance. Its component model also maps naturally to our lesson and dictionary UI, which is highly reusable across screens.
+
+
+#team 
+Steven ATCHALL (@screadman)
+Rayann Sagnon  (@RayannSagnon)
