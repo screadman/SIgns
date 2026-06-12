@@ -37,6 +37,6 @@ Why React Native?
 We chose React Native to ship a single codebase to both iOS and Android, letting a two-person team move fast without sacrificing native performance. Its component model also maps naturally to our lesson and dictionary UI, which is highly reusable across screens.
 
 
-#team 
+# team 
 Steven ATCHALL (@screadman)
 Rayann Sagnon  (@RayannSagnon)
