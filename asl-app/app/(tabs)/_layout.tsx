@@ -1,27 +1,42 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
-import { colors } from '../../constants/theme';
+import { colors, fontSize, spacing } from '../../constants/theme';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
+        headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
-          borderTopColor: colors.border,
           backgroundColor: colors.background,
+          borderTopColor: colors.border,
+          borderTopWidth: 1,
+          height: 64,
+          paddingTop: spacing.xs,
+          paddingBottom: spacing.sm,
         },
-        headerShown: false,
+        tabBarLabelStyle: {
+          fontSize: fontSize.xs,
+          fontWeight: '600',
+        },
+        tabBarIconStyle: {
+          marginTop: spacing.xs,
+        },
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
           title: 'Accueil',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? 'home' : 'home-outline'}
+              size={size}
+              color={color}
+            />
           ),
         }}
       />
@@ -29,8 +44,12 @@ export default function TabLayout() {
         name="learn"
         options={{
           title: 'Apprendre',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="book-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? 'book' : 'book-outline'}
+              size={size}
+              color={color}
+            />
           ),
         }}
       />
@@ -38,8 +57,12 @@ export default function TabLayout() {
         name="practice"
         options={{
           title: 'Pratiquer',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="fitness-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? 'fitness' : 'fitness-outline'}
+              size={size}
+              color={color}
+            />
           ),
         }}
       />
@@ -47,8 +70,12 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profil',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? 'person' : 'person-outline'}
+              size={size}
+              color={color}
+            />
           ),
         }}
       />
