@@ -2,7 +2,7 @@
 
 ## Format
 
-Images fixes (PNG), pas de GIF pour le MVP.
+Images PNG locales.
 
 ## Alphabet A-Z
 
@@ -29,7 +29,7 @@ Images fixes (PNG), pas de GIF pour le MVP.
 | Note | Decoupages individuels de la rangee 0-9 de la planche |
 
 Les lettres wpclipart et la planche Gallaudet partagent la meme base typographique
-(Gallaudet), mais le style de trait n est pas identique (silhouettes vs croquis).
+(Gallaudet), avec un rendu legerement different (silhouettes vs croquis).
 
 ## Mapping
 
@@ -37,9 +37,4 @@ Les lettres wpclipart et la planche Gallaudet partagent la meme base typographiq
 
 ## Usage dans SIgns
 
-Autorise pour une application educative (domaine public).
-
-## Non utilise
-
-Lifeprint.com : interdit pour les apps sans permission ecrite.
-Voir https://www.lifeprint.com/asl101/fingerspelling/abc-gifs/index.htm
+Domaine public : utilisable dans l application educative.
