@@ -1,7 +1,58 @@
 import { Image, ScrollView, Text, View } from 'react-native';
 
-import { ASL_LETTERS_A_TO_M } from '../../constants/aslLetters';
+import { ASL_LETTERS, ASL_NUMBERS, type AslGlyph } from '../../constants/aslLetters';
 import { colors, fontSize, spacing } from '../../constants/theme';
+
+function GlyphGrid({
+  items,
+  accessibilityPrefix,
+}: {
+  items: AslGlyph[];
+  accessibilityPrefix: string;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        gap: spacing.sm,
+      }}
+    >
+      {items.map((item) => (
+        <View
+          key={item.id}
+          style={{
+            width: '30%',
+            backgroundColor: colors.background,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: colors.border,
+            paddingVertical: spacing.sm,
+            alignItems: 'center',
+            marginBottom: spacing.sm,
+          }}
+        >
+          <Image
+            source={item.image}
+            style={{ width: 72, height: 72, resizeMode: 'contain' }}
+            accessibilityLabel={`${accessibilityPrefix} ${item.label}`}
+          />
+          <Text
+            style={{
+              marginTop: spacing.xs,
+              fontSize: fontSize.lg,
+              fontWeight: '700',
+              color: colors.primary,
+            }}
+          >
+            {item.label}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
 
 export default function LearnScreen() {
   return (
@@ -30,49 +81,33 @@ export default function LearnScreen() {
           marginBottom: spacing.lg,
         }}
       >
-        Alphabet ASL : lettres A a M
+        Alphabet et chiffres ASL
       </Text>
 
-      <View
+      <Text
         style={{
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-          gap: spacing.sm,
+          fontSize: fontSize.lg,
+          fontWeight: '700',
+          color: colors.text,
+          marginBottom: spacing.sm,
         }}
       >
-        {ASL_LETTERS_A_TO_M.map((letter) => (
-          <View
-            key={letter.id}
-            style={{
-              width: '30%',
-              backgroundColor: colors.background,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: colors.border,
-              paddingVertical: spacing.sm,
-              alignItems: 'center',
-              marginBottom: spacing.sm,
-            }}
-          >
-            <Image
-              source={letter.image}
-              style={{ width: 72, height: 72, resizeMode: 'contain' }}
-              accessibilityLabel={`Signe ASL pour la lettre ${letter.label}`}
-            />
-            <Text
-              style={{
-                marginTop: spacing.xs,
-                fontSize: fontSize.lg,
-                fontWeight: '700',
-                color: colors.primary,
-              }}
-            >
-              {letter.label}
-            </Text>
-          </View>
-        ))}
-      </View>
+        Alphabet A-Z
+      </Text>
+      <GlyphGrid items={ASL_LETTERS} accessibilityPrefix="Signe ASL pour la lettre" />
+
+      <Text
+        style={{
+          fontSize: fontSize.lg,
+          fontWeight: '700',
+          color: colors.text,
+          marginTop: spacing.lg,
+          marginBottom: spacing.sm,
+        }}
+      >
+        Chiffres 0-9
+      </Text>
+      <GlyphGrid items={ASL_NUMBERS} accessibilityPrefix="Signe ASL pour le chiffre" />
     </ScrollView>
   );
 }

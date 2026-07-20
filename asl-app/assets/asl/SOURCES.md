@@ -1,25 +1,43 @@
-# Sources images ASL (alphabet)
+# Sources images ASL
 
-## Licence
+## Format
 
-Les images des lettres A a M proviennent de Wikimedia Commons.
-Auteur d origine : wpclipart.com
-Statut : domaine public (public domain)
+Images fixes (PNG), pas de GIF pour le MVP.
 
-Source catalogue :
-https://commons.wikimedia.org/wiki/Category:ASL_letters
+## Alphabet A-Z
 
-Fichiers utilises (exemples) :
-- https://commons.wikimedia.org/wiki/File:Sign_language_A.svg
-- ... jusqu a Sign_language_M.svg
+| Element | Detail |
+|---------|--------|
+| Origine | Wikimedia Commons |
+| Fichiers | `Sign_language_A.svg` ... `Sign_language_Z.svg` |
+| Auteur d origine | wpclipart.com |
+| Licence | Domaine public |
+| Catalogue | https://commons.wikimedia.org/wiki/Category:ASL_letters |
+| Stockage | `asl-app/assets/asl/letters/` |
+| Rendu | PNG ~960 px de large a partir des SVG Wikimedia |
 
-Les fichiers dans ce dossier sont des rendus PNG (512 px de large)
-generes a partir des SVG Wikimedia.
+## Chiffres 0-9
+
+| Element | Detail |
+|---------|--------|
+| Origine | Wikimedia Commons |
+| Fichier source | `Asl_alphabet_gallaudet.png` (planche alphabet + chiffres) |
+| Auteur | Ds13 (Wikipedia / Commons) |
+| Licence | Domaine public |
+| Page | https://commons.wikimedia.org/wiki/File:Asl_alphabet_gallaudet.png |
+| Stockage | `asl-app/assets/asl/numbers/` |
+| Note | Decoupages individuels de la rangee 0-9 de la planche |
+
+Les lettres wpclipart et la planche Gallaudet partagent la meme base typographique
+(Gallaudet), mais le style de trait n est pas identique (silhouettes vs croquis).
+
+## Mapping
+
+`asl-app/constants/aslLetters.ts` : `ASL_LETTERS` (A-Z) et `ASL_NUMBERS` (0-9).
 
 ## Usage dans SIgns
 
-Autorise pour une application educative, sans restriction de licence
-supplementaire (domaine public).
+Autorise pour une application educative (domaine public).
 
 ## Non utilise
 
