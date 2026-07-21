@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
     './app/**/*.{js,jsx,ts,tsx}',
     './components/**/*.{js,jsx,ts,tsx}',
@@ -9,15 +10,19 @@ module.exports = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#7C3AED',
-          dark: '#6D28D9',
-          light: '#A78BFA',
+          DEFAULT: '#4F46E5',
+          dark: '#4338CA',
+          light: '#818CF8',
+          surface: '#EEF2FF',
         },
         secondary: {
           DEFAULT: '#3B82F6',
           dark: '#2563EB',
         },
-        accent: '#F59E0B',
+        accent: {
+          DEFAULT: '#FF7235',
+          surface: '#FFF1EC',
+        },
         success: '#22C55E',
         error: '#EF4444',
         warning: '#F59E0B',
@@ -26,14 +31,21 @@ module.exports = {
         background: '#FFFFFF',
         surface: '#F8FAFC',
         'surface-elevated': '#FFFFFF',
-        text: '#1E293B',
-        muted: '#64748B',
+        text: '#1E1B4B',
+        muted: '#6B7280',
         'text-inverse': '#FFFFFF',
-        disabled: '#CBD5E1',
-        border: '#E2E8F0',
+        disabled: '#E5E7EB',
+        border: '#E5E7EB',
         black: '#0F172A',
         white: '#FFFFFF',
         transparent: 'transparent',
+      },
+      fontFamily: {
+        body: ['Inter_400Regular'],
+        'body-medium': ['Inter_500Medium'],
+        'body-semibold': ['Inter_600SemiBold'],
+        heading: ['Outfit_700Bold'],
+        'heading-extrabold': ['Outfit_800ExtraBold'],
       },
       fontSize: {
         xs: ['12px', { lineHeight: '16px' }],

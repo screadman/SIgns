@@ -30,7 +30,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="home"
         options={{
-          title: 'Accueil',
+          title: 'Home',
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
               name={focused ? 'home' : 'home-outline'}
@@ -43,7 +43,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="learn"
         options={{
-          title: 'Apprendre',
+          title: 'Learn',
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
               name={focused ? 'book' : 'book-outline'}
@@ -56,7 +56,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profil',
+          title: 'Profile',
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
               name={focused ? 'person' : 'person-outline'}

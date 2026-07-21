@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import type { ComponentProps } from 'react';
-import { useRef, useState } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Easing,
   FlatList,
-  Pressable,
-  SafeAreaView,
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -14,83 +14,86 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   OnboardingDots,
   OnboardingSlide,
 } from '../components/onboarding';
+import { PrimaryButton } from '../components/ui';
 import {
   borderRadius,
+  borderWidth,
   colors,
-  controlHeight,
+  fontFamily,
   fontSize,
-  fontWeight,
-  iconSize,
-  opacity as opacityTokens,
+  lineHeight,
   spacing,
 } from '../constants/theme';
 import { markOnboardingAsSeen } from '../lib/onboardingStorage';
 
-type OnboardingItem = {
-  id: string;
+const WELCOME_ILLUSTRATION = require('../assets/onboarding/welcome.png');
+const START_ILLUSTRATION = require('../assets/onboarding/start.png');
+const SLIDES = ['welcome', 'features', 'start'] as const;
+const USE_NATIVE_DRIVER = Platform.OS !== 'web';
+
+type SlideId = (typeof SLIDES)[number];
+type IoniconName = ComponentProps<typeof Ionicons>['name'];
+
+type Feature = {
+  icon: IoniconName;
   title: string;
   subtitle: string;
-  icon: ComponentProps<typeof Ionicons>['name'];
+  tone: 'primary' | 'accent';
 };
 
-const SLIDES: OnboardingItem[] = [
+const FEATURES: Feature[] = [
   {
-    id: 'learn',
-    title: 'Apprenez la langue des signes',
-    subtitle: 'Découvrez l’alphabet ASL et enrichissez votre vocabulaire à votre rythme.',
+    icon: 'eye-outline',
+    title: 'Watch',
+    subtitle: 'See signs through images',
+    tone: 'primary',
+  },
+  {
     icon: 'hand-left-outline',
+    title: 'Practice',
+    subtitle: 'Test your knowledge with quizzes',
+    tone: 'accent',
   },
   {
-    id: 'practice',
-    title: 'Entraînez-vous simplement',
-    subtitle: 'Parcourez des leçons courtes pour mémoriser chaque signe progressivement.',
-    icon: 'school-outline',
-  },
-  {
-    id: 'progress',
-    title: 'Progressez chaque jour',
-    subtitle: 'Développez vos connaissances et suivez votre apprentissage au quotidien.',
-    icon: 'trending-up-outline',
+    icon: 'trophy-outline',
+    title: 'Earn',
+    subtitle: 'Unlock badges and level up',
+    tone: 'primary',
   },
 ];
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { width } = useWindowDimensions();
-  const listRef = useRef<FlatList<OnboardingItem>>(null);
-  const scrollX = useRef(new Animated.Value(0)).current;
+  const { width, height } = useWindowDimensions();
+  const listRef = useRef<FlatList<SlideId>>(null);
+  const screenOpacity = useRef(new Animated.Value(1)).current;
   const [activeIndex, setActiveIndex] = useState(0);
+  const [pageHeight, setPageHeight] = useState(height);
   const [isFinishing, setIsFinishing] = useState(false);
 
-  const finishOnboarding = async () => {
+  const finishOnboarding = () => {
     if (isFinishing) {
       return;
     }
 
     setIsFinishing(true);
 
-    try {
-      await markOnboardingAsSeen();
-    } finally {
-      router.replace('/(tabs)/home');
-    }
-  };
-
-  const goToNextSlide = () => {
-    const nextIndex = activeIndex + 1;
-
-    if (nextIndex >= SLIDES.length) {
-      void finishOnboarding();
-      return;
-    }
-
-    listRef.current?.scrollToIndex({ index: nextIndex, animated: true });
-    setActiveIndex(nextIndex);
+    Animated.timing(screenOpacity, {
+      toValue: 0,
+      duration: 300,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: USE_NATIVE_DRIVER,
+    }).start(() => {
+      void markOnboardingAsSeen().finally(() => {
+        router.replace('/(tabs)/home');
+      });
+    });
   };
 
   const updateActiveIndex = (
@@ -100,160 +103,277 @@ export default function OnboardingScreen() {
     setActiveIndex(Math.max(0, Math.min(nextIndex, SLIDES.length - 1)));
   };
 
+  const dots = (index: number) => (
+    <OnboardingDots total={SLIDES.length} activeIndex={index} />
+  );
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Passer l’introduction"
-          hitSlop={12}
-          onPress={() => void finishOnboarding()}
-          style={({ pressed }) => pressed && styles.pressed}
-        >
-          <Text style={styles.skipText}>Passer</Text>
-        </Pressable>
-      </View>
+    <Animated.View style={[styles.screen, { opacity: screenOpacity }]}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <FlatList
+          ref={listRef}
+          style={styles.carousel}
+          contentContainerStyle={styles.carouselContent}
+          onLayout={(event) => {
+            setPageHeight(event.nativeEvent.layout.height);
+          }}
+          data={SLIDES}
+          extraData={activeIndex}
+          keyExtractor={(item) => item}
+          horizontal
+          pagingEnabled
+          bounces={false}
+          decelerationRate="fast"
+          scrollEnabled={activeIndex < SLIDES.length - 1}
+          showsHorizontalScrollIndicator={false}
+          scrollEventThrottle={16}
+          getItemLayout={(_, index) => ({
+            length: width,
+            offset: width * index,
+            index,
+          })}
+          onScroll={updateActiveIndex}
+          onMomentumScrollEnd={updateActiveIndex}
+          renderItem={({ item, index }) => {
+            if (item === 'welcome') {
+              return (
+                <OnboardingSlide
+                  badge="👋 SIGNS"
+                  title="Learn Sign Language"
+                  subtitle="Accessible, fun and progressive"
+                  illustration={WELCOME_ILLUSTRATION}
+                  width={width}
+                  height={pageHeight}
+                  active={activeIndex === index}
+                  footer={dots(0)}
+                />
+              );
+            }
 
-      <Animated.FlatList
-        ref={listRef}
-        data={SLIDES}
-        keyExtractor={(item) => item.id}
-        horizontal
-        pagingEnabled
-        bounces={false}
-        decelerationRate="fast"
-        showsHorizontalScrollIndicator={false}
-        scrollEventThrottle={16}
-        getItemLayout={(_, index) => ({
-          length: width,
-          offset: width * index,
-          index,
-        })}
-        onMomentumScrollEnd={updateActiveIndex}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: true },
-        )}
-        renderItem={({ item, index }) => {
-          const inputRange = [
-            (index - 1) * width,
-            index * width,
-            (index + 1) * width,
-          ];
+            if (item === 'features') {
+              return (
+                <FeaturesSlide
+                  width={width}
+                  height={pageHeight}
+                  active={activeIndex === index}
+                  footer={dots(1)}
+                />
+              );
+            }
 
-          const animatedStyle = {
-            opacity: scrollX.interpolate({
-              inputRange,
-              outputRange: [0.35, 1, 0.35],
-              extrapolate: 'clamp',
-            }),
-            transform: [
-              {
-                translateY: scrollX.interpolate({
-                  inputRange,
-                  outputRange: [20, 0, 20],
-                  extrapolate: 'clamp',
-                }),
-              },
-              {
-                scale: scrollX.interpolate({
-                  inputRange,
-                  outputRange: [0.94, 1, 0.94],
-                  extrapolate: 'clamp',
-                }),
-              },
-            ],
-          };
+            return (
+              <OnboardingSlide
+                badge="🎉 LET'S GO"
+                badgeTone="accent"
+                animateBadge
+                title="Ready to Start?"
+                subtitle="No account required. Start learning now."
+                illustration={START_ILLUSTRATION}
+                width={width}
+                height={pageHeight}
+                active={activeIndex === index}
+                footer={
+                  <PrimaryButton
+                    title="Get Started"
+                    loading={isFinishing}
+                    onPress={finishOnboarding}
+                  />
+                }
+              />
+            );
+          }}
+        />
+      </SafeAreaView>
+    </Animated.View>
+  );
+}
 
-          return (
-            <OnboardingSlide
-              title={item.title}
-              subtitle={item.subtitle}
-              width={width}
-              animatedStyle={animatedStyle}
-              illustration={
-                <View style={styles.illustrationPlaceholder}>
+function FeaturesSlide({
+  width,
+  height,
+  active,
+  footer,
+}: {
+  width: number;
+  height: number;
+  active: boolean;
+  footer: ReactNode;
+}) {
+  const animationValues = useRef(
+    FEATURES.map(() => new Animated.Value(0)),
+  ).current;
+
+  useEffect(() => {
+    animationValues.forEach((value) => value.setValue(0));
+
+    if (!active) {
+      return;
+    }
+
+    const animation = Animated.stagger(
+      100,
+      animationValues.map((value) =>
+        Animated.timing(value, {
+          toValue: 1,
+          duration: 350,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: USE_NATIVE_DRIVER,
+        }),
+      ),
+    );
+
+    animation.start();
+
+    return () => animation.stop();
+  }, [active, animationValues]);
+
+  return (
+    <View style={[styles.featuresSlide, { width, height }]}>
+      <View style={styles.featuresContent}>
+        <View style={styles.titleGroup}>
+          <Text style={styles.featuresTitle}>How It Works</Text>
+          <View style={styles.titleUnderline} />
+        </View>
+
+        <View style={styles.featuresList}>
+          {FEATURES.map((feature, index) => {
+            const isAccent = feature.tone === 'accent';
+            const toneColor = isAccent ? colors.accent : colors.primary;
+            const toneSurface = isAccent
+              ? colors.accentSurface
+              : colors.primarySurface;
+
+            return (
+              <Animated.View
+                key={feature.title}
+                style={[
+                  styles.featureItem,
+                  { borderColor: toneSurface },
+                  {
+                    opacity: animationValues[index],
+                    transform: [
+                      {
+                        translateY: animationValues[index].interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [16, 0],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.featureIcon,
+                    { backgroundColor: toneSurface },
+                  ]}
+                >
                   <Ionicons
-                    name={item.icon}
-                    size={iconSize.xl * 3}
-                    color={colors.primary}
+                    name={feature.icon}
+                    size={28}
+                    color={toneColor}
                   />
                 </View>
-              }
-            />
-          );
-        }}
-      />
 
-      <View style={styles.footer}>
-        <OnboardingDots
-          count={SLIDES.length}
-          activeIndex={activeIndex}
-        />
-        <Pressable
-          accessibilityRole="button"
-          disabled={isFinishing}
-          onPress={goToNextSlide}
-          style={({ pressed }) => [
-            styles.button,
-            pressed && styles.pressed,
-            isFinishing && styles.disabled,
-          ]}
-        >
-          <Text style={styles.buttonText}>
-            {activeIndex === SLIDES.length - 1 ? 'Commencer' : 'Suivant'}
-          </Text>
-        </Pressable>
+                <View style={styles.featureText}>
+                  <Text style={styles.featureTitle}>{feature.title}</Text>
+                  <Text style={styles.featureSubtitle}>
+                    {feature.subtitle}
+                  </Text>
+                </View>
+              </Animated.View>
+            );
+          })}
+        </View>
       </View>
-    </SafeAreaView>
+
+      <View style={styles.featuresFooter}>{footer}</View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
-    minHeight: controlHeight.md,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
+  carousel: {
+    flex: 1,
+  },
+  carouselContent: {
+    height: '100%',
+  },
+  featuresSlide: {
+    flex: 1,
+    height: '100%',
+    justifyContent: 'space-between',
+    backgroundColor: colors.background,
+  },
+  featuresContent: {
+    paddingTop: spacing.lg,
     paddingHorizontal: spacing.lg,
+    gap: spacing.xl,
   },
-  skipText: {
-    color: colors.textMuted,
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
+  titleGroup: {
+    gap: spacing.sm,
   },
-  illustrationPlaceholder: {
-    width: 220,
-    height: 220,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surface,
+  featuresTitle: {
+    color: colors.text,
+    fontFamily: fontFamily.headingExtraBold,
+    fontSize: 28,
+    lineHeight: 35,
   },
-  footer: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-    gap: spacing.lg,
-  },
-  button: {
-    minHeight: controlHeight.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: borderRadius.md,
+  titleUnderline: {
+    width: 48,
+    height: 4,
+    borderRadius: borderRadius.sm,
     backgroundColor: colors.primary,
   },
-  buttonText: {
-    color: colors.textInverse,
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.bold,
+  featuresList: {
+    gap: spacing['2md'],
   },
-  pressed: {
-    opacity: opacityTokens.pressed,
+  featureItem: {
+    minHeight: 88,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderWidth: borderWidth.thin,
+    borderRadius: 20,
+    backgroundColor: colors.background,
   },
-  disabled: {
-    opacity: opacityTokens.disabled,
+  featureIcon: {
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: borderRadius.lg,
+  },
+  featureText: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  featureTitle: {
+    color: colors.text,
+    fontFamily: fontFamily.heading,
+    fontSize: fontSize.lg,
+    lineHeight: 23,
+  },
+  featureSubtitle: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.sm,
+    lineHeight: lineHeight.xs,
+  },
+  featuresFooter: {
+    minHeight: 66,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing['2sm'],
   },
 });

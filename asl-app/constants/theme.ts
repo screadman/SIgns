@@ -1,12 +1,14 @@
 import type { ViewStyle } from 'react-native';
 
 export const colors = {
-  primary: '#7C3AED',
-  primaryDark: '#6D28D9',
-  primaryLight: '#A78BFA',
+  primary: '#4F46E5',
+  primaryDark: '#4338CA',
+  primaryLight: '#818CF8',
+  primarySurface: '#EEF2FF',
   secondary: '#3B82F6',
   secondaryDark: '#2563EB',
-  accent: '#F59E0B',
+  accent: '#FF7235',
+  accentSurface: '#FFF1EC',
   success: '#22C55E',
   error: '#EF4444',
   warning: '#F59E0B',
@@ -15,15 +17,23 @@ export const colors = {
   background: '#FFFFFF',
   surface: '#F8FAFC',
   surfaceElevated: '#FFFFFF',
-  text: '#1E293B',
-  textMuted: '#64748B',
+  text: '#1E1B4B',
+  textMuted: '#6B7280',
   textInverse: '#FFFFFF',
-  disabled: '#CBD5E1',
-  border: '#E2E8F0',
+  disabled: '#E5E7EB',
+  border: '#E5E7EB',
   overlay: 'rgba(15, 23, 42, 0.5)',
   transparent: 'transparent',
   white: '#FFFFFF',
   black: '#0F172A',
+} as const;
+
+export const fontFamily = {
+  body: 'Inter_400Regular',
+  bodyMedium: 'Inter_500Medium',
+  bodySemibold: 'Inter_600SemiBold',
+  heading: 'Outfit_700Bold',
+  headingExtraBold: 'Outfit_800ExtraBold',
 } as const;
 
 export const fontSize = {
@@ -130,6 +140,7 @@ export const shadows = {
 
 export const theme = {
   colors,
+  fontFamily,
   fontSize,
   fontWeight,
   lineHeight,

@@ -1,33 +1,58 @@
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
 
 import { borderRadius, colors, spacing } from '../../constants/theme';
 
 type OnboardingDotsProps = {
-  count: number;
+  total: number;
   activeIndex: number;
 };
 
 export function OnboardingDots({
-  count,
+  total,
   activeIndex,
 }: OnboardingDotsProps) {
   return (
     <View
       style={styles.container}
       accessibilityRole="progressbar"
-      accessibilityValue={{ min: 1, max: count, now: activeIndex + 1 }}
+      accessibilityValue={{ min: 1, max: total, now: activeIndex + 1 }}
     >
-      {Array.from({ length: count }, (_, index) => {
-        const isActive = index === activeIndex;
-
-        return (
-          <View
-            key={index}
-            style={[styles.dot, isActive && styles.activeDot]}
-          />
-        );
-      })}
+      {Array.from({ length: total }, (_, index) => (
+        <Dot key={index} active={index === activeIndex} />
+      ))}
     </View>
+  );
+}
+
+function Dot({ active }: { active: boolean }) {
+  const progress = useRef(new Animated.Value(active ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(progress, {
+      toValue: active ? 1 : 0,
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [active, progress]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.dot,
+        {
+          width: progress.interpolate({
+            inputRange: [0, 1],
+            outputRange: [8, 24],
+          }),
+          backgroundColor: progress.interpolate({
+            inputRange: [0, 1],
+            outputRange: [colors.disabled, colors.primary],
+          }),
+        },
+      ]}
+    />
   );
 }
 
@@ -39,13 +64,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   dot: {
-    width: 8,
     height: 8,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.disabled,
-  },
-  activeDot: {
-    width: 24,
-    backgroundColor: colors.primary,
   },
 });

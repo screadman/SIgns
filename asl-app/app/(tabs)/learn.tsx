@@ -72,7 +72,7 @@ export default function LearnScreen() {
           marginBottom: spacing.xs,
         }}
       >
-        Apprendre
+        Learn
       </Text>
       <Text
         style={{
@@ -81,7 +81,7 @@ export default function LearnScreen() {
           marginBottom: spacing.lg,
         }}
       >
-        Alphabet et chiffres ASL
+        ASL alphabet and numbers
       </Text>
 
       <Text
@@ -94,7 +94,7 @@ export default function LearnScreen() {
       >
         Alphabet A-Z
       </Text>
-      <GlyphGrid items={ASL_LETTERS} accessibilityPrefix="Signe ASL pour la lettre" />
+      <GlyphGrid items={ASL_LETTERS} accessibilityPrefix="ASL sign for letter" />
 
       <Text
         style={{
@@ -105,9 +105,9 @@ export default function LearnScreen() {
           marginBottom: spacing.sm,
         }}
       >
-        Chiffres 0-9
+        Numbers 0-9
       </Text>
-      <GlyphGrid items={ASL_NUMBERS} accessibilityPrefix="Signe ASL pour le chiffre" />
+      <GlyphGrid items={ASL_NUMBERS} accessibilityPrefix="ASL sign for number" />
     </ScrollView>
   );
 }
