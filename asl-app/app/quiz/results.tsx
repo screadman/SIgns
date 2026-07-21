@@ -51,7 +51,7 @@ export default function QuizResultsScreen() {
   }>();
   const lessonId = getParam(params.lessonId);
   const score = Math.max(0, getNumberParam(params.score, 0));
-  const total = Math.max(1, getNumberParam(params.total, 5));
+  const total = Math.max(1, getNumberParam(params.total, 3));
   const xp = Math.max(0, getNumberParam(params.xp, score * 10));
   const earnedStars = Math.min(3, Math.max(1, getNumberParam(params.stars, 1)));
   const lessonData = getLesson(lessonId);

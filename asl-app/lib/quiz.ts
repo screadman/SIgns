@@ -42,7 +42,7 @@ export function generateQuiz(
     return [];
   }
 
-  return Array.from({ length: 5 }, (_, index) => {
+  return Array.from({ length: 3 }, (_, index) => {
     const distractors = shuffle(
       moduleItems.filter((lesson) => lesson.id !== requestedLesson.id),
     ).slice(0, 3);
@@ -57,18 +57,18 @@ export function generateQuiz(
   });
 }
 
-export function getQuizStars(score: number): 1 | 2 | 3 {
-  if (score >= 5) {
+export function getQuizStars(score: number, totalQuestions = 3): 1 | 2 | 3 {
+  if (score >= totalQuestions) {
     return 3;
   }
 
-  if (score === 4) {
+  if (score === totalQuestions - 1) {
     return 2;
   }
 
   return 1;
 }
 
-export function getQuizXp(score: number): number {
-  return score * 10 + (score === 5 ? 20 : 0);
+export function getQuizXp(score: number, totalQuestions = 3): number {
+  return score * 10 + (score === totalQuestions ? 20 : 0);
 }

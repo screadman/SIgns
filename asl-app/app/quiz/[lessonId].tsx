@@ -137,8 +137,8 @@ export default function QuizScreen() {
     }
 
     setIsFinishing(true);
-    const earnedStars = getQuizStars(finalScore);
-    const earnedXp = getQuizXp(finalScore);
+    const earnedStars = getQuizStars(finalScore, questions.length);
+    const earnedXp = getQuizXp(finalScore, questions.length);
 
     void Promise.all([
       saveCompletedLesson(lessonId),
