@@ -65,8 +65,12 @@ const styles = StyleSheet.create({
   featuredCard: {
     width: '100%',
     minHeight: 0,
-    padding: spacing['2md'],
-    borderRadius: borderRadius.xl,
+    padding: 0,
+    borderWidth: 0,
+    borderRadius: 0,
+    backgroundColor: colors.transparent,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   imageContainer: {
     width: '100%',
@@ -78,8 +82,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primarySurface,
   },
   featuredImageContainer: {
-    height: 240,
-    borderRadius: borderRadius.lg,
+    height: 260,
+    borderRadius: borderRadius.xl,
+    backgroundColor: colors.signSurface,
   },
   image: {
     width: 116,
@@ -97,9 +102,9 @@ const styles = StyleSheet.create({
     marginTop: spacing['2sm'],
   },
   featuredLabel: {
-    fontSize: fontSize['4xl'],
-    lineHeight: lineHeight['4xl'],
-    marginTop: spacing.md,
+    fontSize: 64,
+    lineHeight: 81,
+    marginTop: spacing['2md'],
   },
   description: {
     color: colors.textMuted,
@@ -110,9 +115,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   featuredDescription: {
-    maxWidth: 320,
-    fontSize: fontSize.base,
-    lineHeight: lineHeight.base,
-    marginTop: spacing.sm,
+    width: '100%',
+    maxWidth: 342,
+    color: colors.text,
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: spacing['2md'],
   },
 });

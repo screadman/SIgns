@@ -2,7 +2,7 @@ import { ASL_LETTERS, ASL_NUMBERS, type AslGlyph } from './aslLetters';
 import { colors } from './theme';
 
 export type LearningModuleId = 'alphabet' | 'numbers';
-export type LearningModuleIcon = 'text-outline' | 'calculator-outline';
+export type LearningModuleIcon = 'close-circle-outline' | 'apps-outline';
 
 export type Lesson = {
   id: string;
@@ -37,18 +37,18 @@ function createLessons(
 export const LEARNING_MODULES: LearningModule[] = [
   {
     id: 'alphabet',
-    title: 'ASL Alphabet',
+    title: 'Alphabet',
     description: 'Learn the 26 letters of the American Sign Language alphabet.',
-    icon: 'text-outline',
+    icon: 'close-circle-outline',
     color: colors.primary,
     surfaceColor: colors.primarySurface,
     lessons: createLessons('alphabet', ASL_LETTERS, 'Letter'),
   },
   {
     id: 'numbers',
-    title: 'Numbers 0–9',
+    title: 'Numbers',
     description: 'Learn how to sign the first ten numbers with confidence.',
-    icon: 'calculator-outline',
+    icon: 'apps-outline',
     color: colors.accent,
     surfaceColor: colors.accentSurface,
     lessons: createLessons('numbers', ASL_NUMBERS, 'Number'),

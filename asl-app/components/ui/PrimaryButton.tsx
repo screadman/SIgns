@@ -19,11 +19,13 @@ import {
 type PrimaryButtonProps = Omit<PressableProps, 'children' | 'style'> & {
   title: string;
   loading?: boolean;
+  fullWidth?: boolean;
 };
 
 export function PrimaryButton({
   title,
   loading = false,
+  fullWidth = false,
   disabled,
   ...pressableProps
 }: PrimaryButtonProps) {
@@ -37,6 +39,7 @@ export function PrimaryButton({
       disabled={isDisabled}
       style={({ pressed }) => [
         styles.button,
+        fullWidth && styles.fullWidth,
         pressed && styles.pressed,
         isDisabled && styles.disabled,
       ]}
@@ -62,8 +65,11 @@ const styles = StyleSheet.create({
   },
   label: {
     color: colors.textInverse,
-    fontFamily: fontFamily.bodySemibold,
+    fontFamily: fontFamily.heading,
     fontSize: fontSize.lg,
+  },
+  fullWidth: {
+    width: '100%',
   },
   pressed: {
     opacity: opacity.pressed,

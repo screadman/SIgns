@@ -4,12 +4,11 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { LearningModule } from '../../constants/learning';
 import {
   borderRadius,
+  borderWidth,
   colors,
   fontFamily,
   fontSize,
-  lineHeight,
   opacity,
-  shadows,
   spacing,
 } from '../../constants/theme';
 import { ProgressBar } from './ProgressBar';
@@ -17,55 +16,79 @@ import { ProgressBar } from './ProgressBar';
 type ModuleCardProps = {
   module: LearningModule;
   completedLessons: number;
+  locked?: boolean;
   onPress: () => void;
 };
 
 export function ModuleCard({
   module,
   completedLessons,
+  locked = false,
   onPress,
 }: ModuleCardProps) {
   const totalLessons = module.lessons.length;
   const progress = totalLessons === 0 ? 0 : completedLessons / totalLessons;
   const progressPercentage = Math.round(progress * 100);
+  const lessonUnit = module.id === 'alphabet' ? 'letters' : 'numbers';
+  const progressLabel = `${completedLessons} of ${totalLessons} ${lessonUnit} completed`;
 
   return (
     <Pressable
       onPress={onPress}
+      disabled={locked}
       accessibilityRole="button"
-      accessibilityLabel={`${module.title}, ${progressPercentage}% complete`}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      accessibilityState={{ disabled: locked }}
+      accessibilityLabel={
+        locked
+          ? `${module.title}, locked. Complete the alphabet first`
+          : `${module.title}, ${progressPercentage}% complete`
+      }
+      style={({ pressed }) => [
+        styles.card,
+        locked && styles.lockedCard,
+        pressed && !locked && styles.pressed,
+      ]}
     >
       <View style={styles.header}>
         <View
-          style={[styles.iconContainer, { backgroundColor: module.surfaceColor }]}
+          style={[
+            styles.iconContainer,
+            {
+              backgroundColor: locked
+                ? colors.surfaceMuted
+                : module.surfaceColor,
+            },
+          ]}
         >
-          <Ionicons name={module.icon} size={28} color={module.color} />
+          <Ionicons
+            name={module.icon}
+            size={24}
+            color={locked ? colors.textMuted : module.color}
+          />
         </View>
 
         <View style={styles.heading}>
           <Text style={styles.title}>{module.title}</Text>
           <Text style={styles.lessonCount}>
-            {completedLessons} of {totalLessons} lessons
+            {locked ? 'Complete the alphabet first' : progressLabel}
           </Text>
         </View>
 
-        <Ionicons name="chevron-forward" size={22} color={colors.textMuted} />
+        {locked && (
+          <View style={styles.lockIcon}>
+            <Ionicons name="lock-closed-outline" size={16} color={colors.textMuted} />
+          </View>
+        )}
       </View>
 
-      <Text style={styles.description}>{module.description}</Text>
-
-      <View style={styles.progressHeader}>
-        <Text style={styles.progressLabel}>Progress</Text>
-        <Text style={[styles.progressValue, { color: module.color }]}>
-          {progressPercentage}%
-        </Text>
-      </View>
-      <ProgressBar
-        progress={progress}
-        color={module.color}
-        trackColor={module.surfaceColor}
-      />
+      {!locked && (
+        <ProgressBar
+          progress={progress}
+          color={module.color}
+          trackColor={colors.surfaceMuted}
+          style={styles.progressBar}
+        />
+      )}
     </Pressable>
   );
 }
@@ -76,7 +99,14 @@ const styles = StyleSheet.create({
     padding: spacing['2md'],
     borderRadius: borderRadius.xl,
     backgroundColor: colors.surfaceElevated,
-    ...shadows.sm,
+    borderWidth: borderWidth.thick,
+    borderColor: colors.primarySurface,
+    gap: spacing.md,
+  },
+  lockedCard: {
+    borderColor: colors.surfaceMuted,
+    opacity: opacity.muted,
+    gap: 0,
   },
   pressed: {
     opacity: opacity.pressed,
@@ -86,8 +116,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconContainer: {
-    width: 52,
-    height: 52,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: borderRadius.lg,
@@ -98,37 +128,26 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
-    fontFamily: fontFamily.heading,
-    fontSize: fontSize.xl,
-    lineHeight: lineHeight.xl,
+    fontFamily: fontFamily.headingExtraBold,
+    fontSize: fontSize.lg,
+    lineHeight: 23,
   },
   lessonCount: {
     marginTop: 2,
     color: colors.textMuted,
     fontFamily: fontFamily.body,
-    fontSize: fontSize.xs,
-    lineHeight: lineHeight.xs,
-  },
-  description: {
-    marginTop: spacing.md,
-    color: colors.textMuted,
-    fontFamily: fontFamily.body,
     fontSize: fontSize.sm,
-    lineHeight: lineHeight.sm,
+    lineHeight: 17,
   },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
+  lockIcon: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surfaceMuted,
   },
-  progressLabel: {
-    color: colors.textMuted,
-    fontFamily: fontFamily.bodyMedium,
-    fontSize: fontSize.xs,
-  },
-  progressValue: {
-    fontFamily: fontFamily.bodySemibold,
-    fontSize: fontSize.xs,
+  progressBar: {
+    height: 10,
   },
 });

@@ -16,14 +16,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ProgressBar } from '../../components/ui';
+import { LearningBottomNav } from '../../components/ui';
 import { getLearningModule } from '../../constants/learning';
 import {
   borderRadius,
   colors,
   fontFamily,
   fontSize,
-  lineHeight,
   opacity,
   spacing,
 } from '../../constants/theme';
@@ -76,7 +75,6 @@ export default function ModuleScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.notFound}>
-          <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
           <Text style={styles.notFoundTitle}>Module not found</Text>
           <Pressable onPress={() => router.back()} style={styles.backLink}>
             <Text style={styles.backLinkText}>Go back</Text>
@@ -89,122 +87,114 @@ export default function ModuleScreen() {
   const completedCount = module.lessons.filter((lesson) =>
     completedLessonIds.includes(lesson.id),
   ).length;
-  const progress =
-    module.lessons.length === 0 ? 0 : completedCount / module.lessons.length;
+  const currentLessonIndex = module.lessons.findIndex(
+    (lesson) => !completedLessonIds.includes(lesson.id),
+  );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        style={styles.screen}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.navigationRow}>
-          <Pressable
-            onPress={() => router.back()}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            style={({ pressed }) => [
-              styles.backButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </Pressable>
-          <Text style={styles.navigationTitle}>Module</Text>
-          <View style={styles.navigationSpacer} />
-        </View>
-
-        <View style={styles.moduleHeader}>
-          <View
-            style={[styles.moduleIcon, { backgroundColor: module.surfaceColor }]}
-          >
-            <Ionicons name={module.icon} size={32} color={module.color} />
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <View style={styles.screen}>
+        <View style={styles.header}>
+          <View style={styles.headerTitleGroup}>
+            <Pressable
+              onPress={() => router.back()}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+              style={({ pressed }) => [
+                styles.backButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Ionicons name="arrow-back" size={18} color={colors.text} />
+            </Pressable>
+            <Text style={styles.title}>{module.title}</Text>
           </View>
-          <Text style={styles.title}>{module.title}</Text>
-          <Text style={styles.description}>{module.description}</Text>
 
-          <View style={styles.progressRow}>
-            <Text style={styles.progressLabel}>
-              {completedCount} of {module.lessons.length} completed
-            </Text>
-            <Text style={[styles.progressValue, { color: module.color }]}>
-              {Math.round(progress * 100)}%
+          <View style={styles.progressBadge}>
+            <Text style={styles.progressBadgeText}>
+              {completedCount}/{module.lessons.length}
             </Text>
           </View>
-          <ProgressBar
-            progress={progress}
-            color={module.color}
-            trackColor={module.surfaceColor}
-          />
         </View>
 
-        <Text style={styles.sectionTitle}>Lessons</Text>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {isLoading ? (
+            <ActivityIndicator
+              style={styles.loader}
+              size="large"
+              color={colors.primary}
+            />
+          ) : (
+            <View style={styles.grid}>
+              {module.lessons.map((lesson, index) => {
+                const isCompleted = completedLessonIds.includes(lesson.id);
+                const isCurrent =
+                  currentLessonIndex === index ||
+                  (currentLessonIndex === -1 && index === module.lessons.length - 1);
+                const isLocked = !isCompleted && !isCurrent;
 
-        {isLoading ? (
-          <ActivityIndicator
-            style={styles.loader}
-            size="large"
-            color={module.color}
-          />
-        ) : (
-          <View style={styles.lessonList}>
-            {module.lessons.map((lesson, index) => {
-              const isCompleted = completedLessonIds.includes(lesson.id);
-
-              return (
-                <Pressable
-                  key={lesson.id}
-                  onPress={() =>
-                    router.push(`/lesson/${lesson.id}` as Href)
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel={`${lesson.title}${
-                    isCompleted ? ', completed' : ''
-                  }`}
-                  style={({ pressed }) => [
-                    styles.lessonCard,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.lessonNumber,
-                      {
-                        backgroundColor: isCompleted
-                          ? module.color
-                          : module.surfaceColor,
-                      },
+                return (
+                  <Pressable
+                    key={lesson.id}
+                    disabled={isLocked}
+                    onPress={() =>
+                      router.push(`/lesson/${lesson.id}` as Href)
+                    }
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: isLocked }}
+                    accessibilityLabel={`${lesson.title}, ${
+                      isCompleted
+                        ? 'completed'
+                        : isCurrent
+                          ? 'available'
+                          : 'locked'
+                    }`}
+                    style={({ pressed }) => [
+                      styles.bubble,
+                      isCompleted && styles.completedBubble,
+                      isCurrent && !isCompleted && styles.currentBubble,
+                      isLocked && styles.lockedBubble,
+                      pressed && !isLocked && styles.pressed,
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.lessonNumberText,
-                        { color: isCompleted ? colors.white : module.color },
-                      ]}
-                    >
-                      {index + 1}
-                    </Text>
-                  </View>
-
-                  <View style={styles.lessonContent}>
-                    <Text style={styles.lessonTitle}>{lesson.title}</Text>
-                    <Text style={styles.lessonDescription} numberOfLines={1}>
-                      {lesson.sign.description}
-                    </Text>
-                  </View>
-
-                  <Ionicons
-                    name={isCompleted ? 'checkmark-circle' : 'play-circle-outline'}
-                    size={26}
-                    color={isCompleted ? colors.success : module.color}
-                  />
-                </Pressable>
-              );
-            })}
-          </View>
-        )}
-      </ScrollView>
+                    {isLocked ? (
+                      <Ionicons
+                        name="lock-closed-outline"
+                        size={14}
+                        color={colors.textMuted}
+                      />
+                    ) : (
+                      <>
+                        <Text
+                          style={[
+                            styles.bubbleLabel,
+                            isCompleted && styles.completedLabel,
+                            isCurrent && !isCompleted && styles.currentLabel,
+                          ]}
+                        >
+                          {lesson.sign.label}
+                        </Text>
+                        {isCompleted && (
+                          <Ionicons
+                            name="checkmark"
+                            size={10}
+                            color={colors.success}
+                          />
+                        )}
+                      </>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+        </ScrollView>
+      </View>
+      <LearningBottomNav />
     </SafeAreaView>
   );
 }
@@ -212,134 +202,100 @@ export default function ModuleScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
   },
   screen: {
     flex: 1,
   },
-  content: {
-    paddingHorizontal: spacing['2md'],
-    paddingBottom: spacing['2xl'],
-  },
-  navigationRow: {
-    height: 56,
+  header: {
+    height: 60,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing['2sm'],
+  },
+  headerTitleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing['2sm'],
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: borderRadius.full,
-    backgroundColor: colors.background,
-  },
-  navigationTitle: {
-    color: colors.text,
-    fontFamily: fontFamily.bodySemibold,
-    fontSize: fontSize.base,
-  },
-  navigationSpacer: {
-    width: 40,
+    backgroundColor: colors.surfaceMuted,
   },
   pressed: {
     opacity: opacity.pressed,
   },
-  moduleHeader: {
-    alignItems: 'center',
-    padding: spacing['2md'],
-    borderRadius: borderRadius.xl,
-    backgroundColor: colors.surfaceElevated,
-  },
-  moduleIcon: {
-    width: 64,
-    height: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: borderRadius.lg,
-  },
   title: {
-    marginTop: spacing.md,
     color: colors.text,
     fontFamily: fontFamily.headingExtraBold,
     fontSize: fontSize['2xl'],
-    lineHeight: lineHeight['2xl'],
-    textAlign: 'center',
+    lineHeight: 30,
   },
-  description: {
-    marginTop: spacing.sm,
-    color: colors.textMuted,
-    fontFamily: fontFamily.body,
-    fontSize: fontSize.sm,
-    lineHeight: lineHeight.sm,
-    textAlign: 'center',
+  progressBadge: {
+    paddingHorizontal: spacing['2sm'],
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primarySurface,
   },
-  progressRow: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  progressLabel: {
-    color: colors.textMuted,
-    fontFamily: fontFamily.bodyMedium,
-    fontSize: fontSize.xs,
-  },
-  progressValue: {
-    fontFamily: fontFamily.bodySemibold,
-    fontSize: fontSize.xs,
-  },
-  sectionTitle: {
-    marginTop: spacing.xl,
-    marginBottom: spacing['2sm'],
-    color: colors.text,
+  progressBadgeText: {
+    color: colors.primary,
     fontFamily: fontFamily.heading,
-    fontSize: fontSize.xl,
-    lineHeight: lineHeight.xl,
+    fontSize: fontSize.sm,
+    lineHeight: 18,
+  },
+  content: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
   loader: {
     marginTop: spacing.xl,
   },
-  lessonList: {
-    gap: spacing.sm,
-  },
-  lessonCard: {
-    minHeight: 76,
+  grid: {
+    width: 288,
+    alignSelf: 'center',
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing['2sm'],
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.surfaceElevated,
+    flexWrap: 'wrap',
+    gap: spacing['2sm'],
+    paddingVertical: spacing.sm,
   },
-  lessonNumber: {
-    width: 44,
-    height: 44,
+  bubble: {
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.full,
   },
-  lessonNumberText: {
-    fontFamily: fontFamily.bodySemibold,
-    fontSize: fontSize.sm,
+  completedBubble: {
+    backgroundColor: colors.successSurface,
   },
-  lessonContent: {
-    flex: 1,
-    marginHorizontal: spacing['2sm'],
+  currentBubble: {
+    backgroundColor: colors.primary,
   },
-  lessonTitle: {
+  lockedBubble: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  bubbleLabel: {
     color: colors.text,
-    fontFamily: fontFamily.bodySemibold,
-    fontSize: fontSize.base,
-    lineHeight: lineHeight.base,
+    fontFamily: fontFamily.headingExtraBold,
+    fontSize: fontSize.sm,
+    lineHeight: 18,
   },
-  lessonDescription: {
-    marginTop: 2,
-    color: colors.textMuted,
-    fontFamily: fontFamily.body,
-    fontSize: fontSize.xs,
-    lineHeight: lineHeight.xs,
+  completedLabel: {
+    color: colors.success,
+  },
+  currentLabel: {
+    color: colors.textInverse,
+    fontSize: fontSize.lg,
+    lineHeight: 23,
   },
   notFound: {
     flex: 1,
@@ -348,7 +304,6 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   notFoundTitle: {
-    marginTop: spacing.md,
     color: colors.text,
     fontFamily: fontFamily.heading,
     fontSize: fontSize.xl,
