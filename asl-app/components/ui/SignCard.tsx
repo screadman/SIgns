@@ -15,29 +15,37 @@ import {
 type SignCardProps = {
   sign: AslGlyph;
   accessibilityPrefix?: string;
+  featured?: boolean;
 };
 
 export function SignCard({
   sign,
   accessibilityPrefix = 'ASL sign for',
+  featured = false,
 }: SignCardProps) {
   return (
     <View
-      style={styles.card}
+      style={[styles.card, featured && styles.featuredCard]}
       accessible
       accessibilityLabel={`${accessibilityPrefix} ${sign.label}. ${sign.description}`}
     >
-      <View style={styles.imageContainer}>
+      <View
+        style={[styles.imageContainer, featured && styles.featuredImageContainer]}
+      >
         <Image
           source={sign.image}
-          style={styles.image}
+          style={[styles.image, featured && styles.featuredImage]}
           resizeMode="contain"
           accessibilityIgnoresInvertColors
         />
       </View>
 
-      <Text style={styles.label}>{sign.label}</Text>
-      <Text style={styles.description}>{sign.description}</Text>
+      <Text style={[styles.label, featured && styles.featuredLabel]}>
+        {sign.label}
+      </Text>
+      <Text style={[styles.description, featured && styles.featuredDescription]}>
+        {sign.description}
+      </Text>
     </View>
   );
 }
@@ -54,6 +62,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
     ...shadows.sm,
   },
+  featuredCard: {
+    width: '100%',
+    minHeight: 0,
+    padding: spacing['2md'],
+    borderRadius: borderRadius.xl,
+  },
   imageContainer: {
     width: '100%',
     height: 132,
@@ -63,9 +77,17 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     backgroundColor: colors.primarySurface,
   },
+  featuredImageContainer: {
+    height: 240,
+    borderRadius: borderRadius.lg,
+  },
   image: {
     width: 116,
     height: 116,
+  },
+  featuredImage: {
+    width: 220,
+    height: 220,
   },
   label: {
     color: colors.primary,
@@ -74,6 +96,11 @@ const styles = StyleSheet.create({
     lineHeight: lineHeight['2xl'],
     marginTop: spacing['2sm'],
   },
+  featuredLabel: {
+    fontSize: fontSize['4xl'],
+    lineHeight: lineHeight['4xl'],
+    marginTop: spacing.md,
+  },
   description: {
     color: colors.textMuted,
     fontFamily: fontFamily.body,
@@ -81,5 +108,11 @@ const styles = StyleSheet.create({
     lineHeight: lineHeight.xs,
     marginTop: spacing.xs,
     textAlign: 'center',
+  },
+  featuredDescription: {
+    maxWidth: 320,
+    fontSize: fontSize.base,
+    lineHeight: lineHeight.base,
+    marginTop: spacing.sm,
   },
 });

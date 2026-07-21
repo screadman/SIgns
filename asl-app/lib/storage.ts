@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const COMPLETED_LESSONS_KEY = 'completed_lessons';
+export const STARS_KEY = 'stars';
 
 export async function getCompletedLessons(): Promise<string[]> {
   const storedValue = await AsyncStorage.getItem(COMPLETED_LESSONS_KEY);
@@ -24,4 +25,35 @@ export async function getCompletedLessons(): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+export async function saveCompletedLesson(lessonId: string): Promise<string[]> {
+  const normalizedLessonId = lessonId.trim();
+
+  if (!normalizedLessonId) {
+    return getCompletedLessons();
+  }
+
+  const completedLessons = await getCompletedLessons();
+
+  if (completedLessons.includes(normalizedLessonId)) {
+    return completedLessons;
+  }
+
+  const updatedLessons = [...completedLessons, normalizedLessonId];
+  await AsyncStorage.setItem(COMPLETED_LESSONS_KEY, JSON.stringify(updatedLessons));
+
+  return updatedLessons;
+}
+
+export async function getStars(): Promise<number> {
+  const storedValue = await AsyncStorage.getItem(STARS_KEY);
+
+  if (!storedValue) {
+    return 0;
+  }
+
+  const stars = Number(storedValue);
+
+  return Number.isFinite(stars) && stars >= 0 ? Math.floor(stars) : 0;
 }
