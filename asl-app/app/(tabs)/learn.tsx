@@ -1,5 +1,6 @@
-import { Image, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 
+import { SignCard } from '../../components/ui';
 import { ASL_LETTERS, ASL_NUMBERS, type AslGlyph } from '../../constants/aslLetters';
 import { colors, fontSize, spacing } from '../../constants/theme';
 
@@ -20,35 +21,11 @@ function GlyphGrid({
       }}
     >
       {items.map((item) => (
-        <View
+        <SignCard
           key={item.id}
-          style={{
-            width: '30%',
-            backgroundColor: colors.background,
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: colors.border,
-            paddingVertical: spacing.sm,
-            alignItems: 'center',
-            marginBottom: spacing.sm,
-          }}
-        >
-          <Image
-            source={item.image}
-            style={{ width: 72, height: 72, resizeMode: 'contain' }}
-            accessibilityLabel={`${accessibilityPrefix} ${item.label}`}
-          />
-          <Text
-            style={{
-              marginTop: spacing.xs,
-              fontSize: fontSize.lg,
-              fontWeight: '700',
-              color: colors.primary,
-            }}
-          >
-            {item.label}
-          </Text>
-        </View>
+          sign={item}
+          accessibilityPrefix={accessibilityPrefix}
+        />
       ))}
     </View>
   );
