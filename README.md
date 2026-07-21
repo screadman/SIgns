@@ -1,5 +1,5 @@
 # SIgns
-Signs mobile app that makes learning sign language accessible to everyone — through an interactive dictionary and structured, bite-sized lessons.
+Signs mobile app that makes learning sign language accessible to everyone through an interactive dictionary and structured, bite-sized lessons.
 Built with React Native by a team of two.
 
 

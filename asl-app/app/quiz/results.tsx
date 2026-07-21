@@ -108,7 +108,7 @@ export default function QuizResultsScreen() {
           <Text style={styles.title}>Quiz complete!</Text>
           <Text style={styles.subtitle}>
             {score === total
-              ? 'Perfect score — amazing work!'
+              ? 'Perfect score. Amazing work!'
               : 'Great practice. Keep building your skills!'}
           </Text>
 

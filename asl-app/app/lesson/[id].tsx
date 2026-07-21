@@ -49,7 +49,9 @@ export default function LessonScreen() {
         <View style={styles.header}>
           <View style={styles.headerTitleGroup}>
             <Pressable
-              onPress={() => router.back()}
+              onPress={() =>
+                router.replace(`/module/${lesson.moduleId}` as Href)
+              }
               accessibilityRole="button"
               accessibilityLabel="Go back"
               style={({ pressed }) => [
