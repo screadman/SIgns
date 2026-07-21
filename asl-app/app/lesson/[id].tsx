@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   LearningBottomNav,
   PrimaryButton,
+  ProgressBar,
   SignCard,
 } from '../../components/ui';
 import { getLesson } from '../../constants/learning';
@@ -77,6 +78,15 @@ export default function LessonScreen() {
               />
             ))}
           </View>
+        </View>
+
+        <View style={styles.headerProgressContainer}>
+          <ProgressBar
+            progress={(lessonIndex + 1) / module.lessons.length}
+            color={colors.primary}
+            trackColor={colors.primarySurface}
+            style={styles.headerProgress}
+          />
         </View>
 
         <ScrollView
@@ -154,6 +164,13 @@ const styles = StyleSheet.create({
   hearts: {
     flexDirection: 'row',
     gap: spacing.xs,
+  },
+  headerProgressContainer: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  headerProgress: {
+    height: 6,
   },
   content: {
     flex: 1,

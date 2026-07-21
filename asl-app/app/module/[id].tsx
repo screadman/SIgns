@@ -90,6 +90,13 @@ export default function ModuleScreen() {
   const currentLessonIndex = module.lessons.findIndex(
     (lesson) => !completedLessonIds.includes(lesson.id),
   );
+  const alphabetModule = getLearningModule('alphabet');
+  const isModuleLocked =
+    module.id === 'numbers' &&
+    alphabetModule !== undefined &&
+    !alphabetModule.lessons.every((lesson) =>
+      completedLessonIds.includes(lesson.id),
+    );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -133,9 +140,12 @@ export default function ModuleScreen() {
               {module.lessons.map((lesson, index) => {
                 const isCompleted = completedLessonIds.includes(lesson.id);
                 const isCurrent =
-                  currentLessonIndex === index ||
-                  (currentLessonIndex === -1 && index === module.lessons.length - 1);
-                const isLocked = !isCompleted && !isCurrent;
+                  !isModuleLocked &&
+                  (currentLessonIndex === index ||
+                    (currentLessonIndex === -1 &&
+                      index === module.lessons.length - 1));
+                const isLocked =
+                  isModuleLocked || (!isCompleted && !isCurrent);
 
                 return (
                   <Pressable

@@ -35,18 +35,16 @@ export function ModuleCard({
   return (
     <Pressable
       onPress={onPress}
-      disabled={locked}
       accessibilityRole="button"
-      accessibilityState={{ disabled: locked }}
       accessibilityLabel={
         locked
-          ? `${module.title}, locked. Complete the alphabet first`
+          ? `${module.title}, lessons locked. Complete the alphabet first`
           : `${module.title}, ${progressPercentage}% complete`
       }
       style={({ pressed }) => [
         styles.card,
         locked && styles.lockedCard,
-        pressed && !locked && styles.pressed,
+        pressed && styles.pressed,
       ]}
     >
       <View style={styles.header}>
@@ -81,14 +79,12 @@ export function ModuleCard({
         )}
       </View>
 
-      {!locked && (
-        <ProgressBar
-          progress={progress}
-          color={module.color}
-          trackColor={colors.surfaceMuted}
-          style={styles.progressBar}
-        />
-      )}
+      <ProgressBar
+        progress={progress}
+        color={locked ? colors.textMuted : module.color}
+        trackColor={colors.surfaceMuted}
+        style={styles.progressBar}
+      />
     </Pressable>
   );
 }
@@ -106,7 +102,6 @@ const styles = StyleSheet.create({
   lockedCard: {
     borderColor: colors.surfaceMuted,
     opacity: opacity.muted,
-    gap: 0,
   },
   pressed: {
     opacity: opacity.pressed,
