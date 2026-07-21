@@ -57,3 +57,13 @@ export async function getStars(): Promise<number> {
 
   return Number.isFinite(stars) && stars >= 0 ? Math.floor(stars) : 0;
 }
+
+export async function addStars(earnedStars: number): Promise<number> {
+  const normalizedStars = Math.max(0, Math.floor(earnedStars));
+  const currentStars = await getStars();
+  const updatedStars = currentStars + normalizedStars;
+
+  await AsyncStorage.setItem(STARS_KEY, String(updatedStars));
+
+  return updatedStars;
+}
