@@ -42,22 +42,17 @@ export function generateQuiz(
     return [];
   }
 
-  const additionalPrompts = shuffle(
-    moduleItems.filter((lesson) => lesson.id !== requestedLesson.id),
-  ).slice(0, 4);
-  const prompts = [requestedLesson, ...additionalPrompts];
-
-  return prompts.map((prompt, index) => {
+  return Array.from({ length: 5 }, (_, index) => {
     const distractors = shuffle(
-      moduleItems.filter((lesson) => lesson.id !== prompt.id),
+      moduleItems.filter((lesson) => lesson.id !== requestedLesson.id),
     ).slice(0, 3);
 
     return {
       id: `${lessonId}-question-${index + 1}`,
       format: index % 2 === 0 ? 'image-to-label' : 'label-to-image',
-      prompt,
-      options: shuffle([prompt, ...distractors]),
-      correctAnswerId: prompt.id,
+      prompt: requestedLesson,
+      options: shuffle([requestedLesson, ...distractors]),
+      correctAnswerId: requestedLesson.id,
     };
   });
 }
