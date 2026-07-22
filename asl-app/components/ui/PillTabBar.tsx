@@ -64,8 +64,9 @@ const TABS: TabItem[] = [
   },
 ];
 
-export const PILL_TAB_BAR_HEIGHT = 64;
+export const PILL_TAB_BAR_HEIGHT = 52;
 export const PILL_TAB_BAR_GAP = spacing.sm;
+
 
 function resolveActiveKey(pathname: string) {
   if (
@@ -122,7 +123,7 @@ function PillTabBarContent({
               <View style={[styles.iconWrap, isActive && styles.iconWrapActive]}>
                 <Ionicons
                   name={isActive ? tab.activeIcon : tab.icon}
-                  size={iconSize.lg}
+                  size={iconSize.md}
                   color={isActive ? colors.text : colors.textInverse}
                 />
               </View>
@@ -214,8 +215,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconWrap: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: borderRadius.full,

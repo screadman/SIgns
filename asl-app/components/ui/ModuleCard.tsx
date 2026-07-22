@@ -60,11 +60,22 @@ export function ModuleCard({
             },
           ]}
         >
-          <Ionicons
-            name={module.icon}
-            size={24}
-            color={locked ? colors.textMuted : module.color}
-          />
+          {module.id === 'alphabet' ? (
+            <Text
+              style={[
+                styles.alphabetGlyph,
+                { color: locked ? colors.textMuted : module.color },
+              ]}
+            >
+              ABC
+            </Text>
+          ) : (
+            <Ionicons
+              name={module.icon}
+              size={24}
+              color={locked ? colors.textMuted : module.color}
+            />
+          )}
         </View>
 
         <View style={styles.heading}>
@@ -118,6 +129,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: borderRadius.lg,
+  },
+  alphabetGlyph: {
+    fontFamily: fontFamily.headingExtraBold,
+    fontSize: fontSize.sm,
+    letterSpacing: -0.4,
   },
   heading: {
     flex: 1,
