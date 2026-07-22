@@ -29,7 +29,6 @@ import {
   getQuizXp,
   type QuizFormat,
 } from '../../lib/quiz';
-import { addStars, saveCompletedLesson } from '../../lib/storage';
 
 const ALL_LESSONS = LEARNING_MODULES.flatMap((module) => module.lessons);
 
@@ -139,22 +138,19 @@ export default function QuizScreen() {
     setIsFinishing(true);
     const earnedStars = getQuizStars(finalScore, questions.length);
     const earnedXp = getQuizXp(finalScore, questions.length);
+    const resultId = `${lessonId}-${Date.now()}`;
 
-    void Promise.all([
-      saveCompletedLesson(lessonId),
-      addStars(earnedStars),
-    ]).finally(() => {
-      router.replace({
-        pathname: '/quiz/results',
-        params: {
-          lessonId,
-          score: String(finalScore),
-          total: String(questions.length),
-          xp: String(earnedXp),
-          stars: String(earnedStars),
-        },
-      } as Href);
-    });
+    router.replace({
+      pathname: '/quiz/results',
+      params: {
+        lessonId,
+        score: String(finalScore),
+        total: String(questions.length),
+        xp: String(earnedXp),
+        stars: String(earnedStars),
+        resultId,
+      },
+    } as Href);
   }
 
   function handleAnswer(answerId: string) {
