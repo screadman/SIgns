@@ -20,12 +20,14 @@ type PrimaryButtonProps = Omit<PressableProps, 'children' | 'style'> & {
   title: string;
   loading?: boolean;
   fullWidth?: boolean;
+  compact?: boolean;
 };
 
 export function PrimaryButton({
   title,
   loading = false,
   fullWidth = false,
+  compact = false,
   disabled,
   ...pressableProps
 }: PrimaryButtonProps) {
@@ -39,6 +41,7 @@ export function PrimaryButton({
       disabled={isDisabled}
       style={({ pressed }) => [
         styles.button,
+        compact && styles.buttonCompact,
         fullWidth && styles.fullWidth,
         pressed && styles.pressed,
         isDisabled && styles.disabled,
@@ -47,7 +50,9 @@ export function PrimaryButton({
       {loading ? (
         <ActivityIndicator color={colors.textInverse} />
       ) : (
-        <Text style={styles.label}>{title}</Text>
+        <Text style={[styles.label, compact && styles.labelCompact]}>
+          {title}
+        </Text>
       )}
     </Pressable>
   );
@@ -63,10 +68,18 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
     backgroundColor: colors.primary,
   },
+  buttonCompact: {
+    minWidth: 168,
+    height: controlHeight.md,
+    paddingHorizontal: spacing.xl,
+  },
   label: {
     color: colors.textInverse,
     fontFamily: fontFamily.heading,
     fontSize: fontSize.lg,
+  },
+  labelCompact: {
+    fontSize: fontSize.base,
   },
   fullWidth: {
     width: '100%',

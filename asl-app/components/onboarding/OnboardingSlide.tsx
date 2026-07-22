@@ -51,7 +51,7 @@ export function OnboardingSlide({
   const badgeProgress = useRef(
     new Animated.Value(animateBadge ? 0 : 1),
   ).current;
-  const illustrationSize = Math.min(310, width - spacing['2xl'] - spacing.xl);
+  const illustrationSize = Math.min(240, Math.max(180, width - spacing['3xl']));
 
   useEffect(() => {
     if (!active) {
@@ -161,19 +161,17 @@ export function OnboardingSlide({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    height: '100%',
-    justifyContent: 'flex-start',
+    overflow: 'hidden',
+    justifyContent: 'center',
     backgroundColor: colors.background,
   },
   content: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: spacing.lg,
+    paddingTop: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
-    gap: spacing.xl,
+    gap: spacing.lg,
   },
   badge: {
     minHeight: 30,

@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ModuleCard, SkeletonLoader } from '../../components/ui';
+import { PILL_TAB_BAR_HEIGHT } from '../../components/ui/PillTabBar';
 import { LEARNING_MODULES } from '../../constants/learning';
 import {
   colors,
@@ -116,7 +117,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    paddingBottom: spacing['2xl'],
+    paddingBottom: spacing['2xl'] + PILL_TAB_BAR_HEIGHT + spacing.lg,
   },
   header: {
     minHeight: 54,

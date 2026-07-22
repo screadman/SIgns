@@ -3,7 +3,7 @@
  *
  * Dev 2 ajoute ici les exports des composants presents dans ce dossier.
  */
-export { LearningBottomNav } from './LearningBottomNav';
+export { LearningBottomNav, TabsPillTabBar } from './PillTabBar';
 export { ModuleCard } from './ModuleCard';
 export { PrimaryButton } from './PrimaryButton';
 export { ProgressBar } from './ProgressBar';
