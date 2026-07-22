@@ -32,7 +32,7 @@ type OnboardingSlideProps = {
   height: number;
   active: boolean;
   animateBadge?: boolean;
-  footer: ReactNode;
+  footer?: ReactNode;
 };
 
 export function OnboardingSlide({
@@ -154,7 +154,7 @@ export function OnboardingSlide({
         </View>
       </View>
 
-      <View style={styles.footer}>{footer}</View>
+      {footer ? <View style={styles.footer}>{footer}</View> : null}
     </View>
   );
 }
@@ -163,13 +163,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     height: '100%',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     backgroundColor: colors.background,
   },
   content: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
     paddingTop: spacing.lg,
     paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
     gap: spacing.xl,
   },
   badge: {

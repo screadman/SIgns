@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import type { ComponentProps, ReactNode } from 'react';
+import type { ComponentProps } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -103,86 +103,91 @@ export default function OnboardingScreen() {
     setActiveIndex(Math.max(0, Math.min(nextIndex, SLIDES.length - 1)));
   };
 
-  const dots = (index: number) => (
-    <OnboardingDots total={SLIDES.length} activeIndex={index} />
-  );
+  const isLastSlide = activeIndex === SLIDES.length - 1;
 
   return (
     <Animated.View style={[styles.screen, { opacity: screenOpacity }]}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <FlatList
-          ref={listRef}
-          style={styles.carousel}
-          contentContainerStyle={styles.carouselContent}
+        <View
+          style={styles.carouselArea}
           onLayout={(event) => {
             setPageHeight(event.nativeEvent.layout.height);
           }}
-          data={SLIDES}
-          extraData={activeIndex}
-          keyExtractor={(item) => item}
-          horizontal
-          pagingEnabled
-          bounces={false}
-          decelerationRate="fast"
-          scrollEnabled={activeIndex < SLIDES.length - 1}
-          showsHorizontalScrollIndicator={false}
-          scrollEventThrottle={16}
-          getItemLayout={(_, index) => ({
-            length: width,
-            offset: width * index,
-            index,
-          })}
-          onScroll={updateActiveIndex}
-          onMomentumScrollEnd={updateActiveIndex}
-          renderItem={({ item, index }) => {
-            if (item === 'welcome') {
+        >
+          <FlatList
+            ref={listRef}
+            style={styles.carousel}
+            contentContainerStyle={styles.carouselContent}
+            data={SLIDES}
+            extraData={activeIndex}
+            keyExtractor={(item) => item}
+            horizontal
+            pagingEnabled
+            bounces
+            decelerationRate="fast"
+            scrollEnabled
+            showsHorizontalScrollIndicator={false}
+            scrollEventThrottle={16}
+            getItemLayout={(_, index) => ({
+              length: width,
+              offset: width * index,
+              index,
+            })}
+            onScroll={updateActiveIndex}
+            onMomentumScrollEnd={updateActiveIndex}
+            renderItem={({ item, index }) => {
+              if (item === 'welcome') {
+                return (
+                  <OnboardingSlide
+                    badge="👋 SIGNS"
+                    title="Learn Sign Language"
+                    subtitle="Accessible, fun and progressive"
+                    illustration={WELCOME_ILLUSTRATION}
+                    width={width}
+                    height={pageHeight}
+                    active={activeIndex === index}
+                  />
+                );
+              }
+
+              if (item === 'features') {
+                return (
+                  <FeaturesSlide
+                    width={width}
+                    height={pageHeight}
+                    active={activeIndex === index}
+                  />
+                );
+              }
+
               return (
                 <OnboardingSlide
-                  badge="👋 SIGNS"
-                  title="Learn Sign Language"
-                  subtitle="Accessible, fun and progressive"
-                  illustration={WELCOME_ILLUSTRATION}
+                  badge="🎉 LET'S GO"
+                  badgeTone="accent"
+                  animateBadge
+                  title="Ready to Start?"
+                  subtitle="No account required. Start learning now."
+                  illustration={START_ILLUSTRATION}
                   width={width}
                   height={pageHeight}
                   active={activeIndex === index}
-                  footer={dots(0)}
                 />
               );
-            }
+            }}
+          />
+        </View>
 
-            if (item === 'features') {
-              return (
-                <FeaturesSlide
-                  width={width}
-                  height={pageHeight}
-                  active={activeIndex === index}
-                  footer={dots(1)}
-                />
-              );
-            }
-
-            return (
-              <OnboardingSlide
-                badge="🎉 LET'S GO"
-                badgeTone="accent"
-                animateBadge
-                title="Ready to Start?"
-                subtitle="No account required. Start learning now."
-                illustration={START_ILLUSTRATION}
-                width={width}
-                height={pageHeight}
-                active={activeIndex === index}
-                footer={
-                  <PrimaryButton
-                    title="Get Started"
-                    loading={isFinishing}
-                    onPress={finishOnboarding}
-                  />
-                }
-              />
-            );
-          }}
-        />
+        <View style={styles.bottomControls}>
+          {isLastSlide ? (
+            <PrimaryButton
+              title="Get Started"
+              loading={isFinishing}
+              onPress={finishOnboarding}
+            />
+          ) : (
+            <OnboardingDots total={SLIDES.length} activeIndex={activeIndex} />
+          )}
+        </View>
       </SafeAreaView>
     </Animated.View>
   );
@@ -192,12 +197,10 @@ function FeaturesSlide({
   width,
   height,
   active,
-  footer,
 }: {
   width: number;
   height: number;
   active: boolean;
-  footer: ReactNode;
 }) {
   const animationValues = useRef(
     FEATURES.map(() => new Animated.Value(0)),
@@ -286,8 +289,6 @@ function FeaturesSlide({
           })}
         </View>
       </View>
-
-      <View style={styles.featuresFooter}>{footer}</View>
     </View>
   );
 }
@@ -301,16 +302,27 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  carouselArea: {
+    flex: 1,
+  },
   carousel: {
     flex: 1,
   },
   carouselContent: {
     height: '100%',
   },
+  bottomControls: {
+    minHeight: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing['2sm'],
+  },
   featuresSlide: {
     flex: 1,
     height: '100%',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     backgroundColor: colors.background,
   },
   featuresContent: {
@@ -368,12 +380,5 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.body,
     fontSize: fontSize.sm,
     lineHeight: lineHeight.xs,
-  },
-  featuresFooter: {
-    minHeight: 66,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing['2sm'],
   },
 });
