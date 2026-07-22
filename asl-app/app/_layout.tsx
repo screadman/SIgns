@@ -35,6 +35,22 @@ export default function RootLayout() {
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="module/[id]"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="lesson/[id]"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="quiz/[lessonId]"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="quiz/results"
+          options={{ animation: 'slide_from_bottom' }}
+        />
       </Stack>
     </>
   );
