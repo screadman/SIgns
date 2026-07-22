@@ -17,7 +17,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LearningBottomNav } from '../../components/ui';
-import { getLearningModule } from '../../constants/learning';
+import {
+  getLearningModule,
+  isModuleLocked as isLearningModuleLocked,
+} from '../../constants/learning';
 import {
   borderRadius,
   colors,
@@ -90,13 +93,10 @@ export default function ModuleScreen() {
   const currentLessonIndex = module.lessons.findIndex(
     (lesson) => !completedLessonIds.includes(lesson.id),
   );
-  const alphabetModule = getLearningModule('alphabet');
-  const isModuleLocked =
-    module.id === 'numbers' &&
-    alphabetModule !== undefined &&
-    !alphabetModule.lessons.every((lesson) =>
-      completedLessonIds.includes(lesson.id),
-    );
+  const isModuleLocked = isLearningModuleLocked(
+    module.id,
+    completedLessonIds,
+  );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>

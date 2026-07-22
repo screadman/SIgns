@@ -5,7 +5,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ModuleCard, SkeletonLoader } from '../../components/ui';
 import { PILL_TAB_BAR_HEIGHT } from '../../components/ui/PillTabBar';
-import { LEARNING_MODULES } from '../../constants/learning';
+import {
+  LEARNING_MODULES,
+  isModuleLocked,
+} from '../../constants/learning';
 import {
   colors,
   fontFamily,
@@ -52,17 +55,6 @@ export default function LearnScreen() {
     }, []),
   );
 
-  const alphabetModule = LEARNING_MODULES.find(
-    (module) => module.id === 'alphabet',
-  );
-  const alphabetCompleted =
-    alphabetModule?.lessons.filter((lesson) =>
-      completedLessonIds.includes(lesson.id),
-    ).length ?? 0;
-  const isAlphabetComplete =
-    alphabetModule !== undefined &&
-    alphabetCompleted === alphabetModule.lessons.length;
-
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
@@ -83,7 +75,7 @@ export default function LearnScreen() {
                 const completedLessons = module.lessons.filter((lesson) =>
                   completedLessonIds.includes(lesson.id),
                 ).length;
-                const locked = module.id === 'numbers' && !isAlphabetComplete;
+                const locked = isModuleLocked(module.id, completedLessonIds);
 
                 return (
                   <ModuleCard
@@ -91,12 +83,16 @@ export default function LearnScreen() {
                     module={module}
                     completedLessons={completedLessons}
                     locked={locked}
-                    onPress={() =>
+                    onPress={() => {
+                      if (locked) {
+                        return;
+                      }
+
                       router.push({
                         pathname: '/module/[id]',
                         params: { id: module.id },
-                      })
-                    }
+                      });
+                    }}
                   />
                 );
               })}

@@ -1,15 +1,22 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
+  BADGES,
+  type BadgeId,
+} from '../constants/badges';
+import {
   LEARNING_MODULES,
+  getLearningModule,
   type Lesson,
 } from '../constants/learning';
+import { getLevel } from './levels';
 
 export const COMPLETED_LESSONS_KEY = 'completed_lessons';
 export const STARS_KEY = 'stars';
 export const XP_KEY = 'xp';
 export const ACTIVITY_DATES_KEY = 'activity_dates';
 export const LAST_QUIZ_RESULT_ID_KEY = 'last_quiz_result_id';
+export const UNLOCKED_BADGES_KEY = 'unlocked_badges';
 
 export type QuizResultInput = {
   lessonId: string;
@@ -26,6 +33,12 @@ export type QuizResultSnapshot = {
   xp: number;
   streak: number;
   nextLesson: Lesson | null;
+  unlockedBadges: BadgeId[];
+};
+
+export type BadgeCheckContext = {
+  score?: number;
+  total?: number;
 };
 
 function toDayKey(date: Date): string {
@@ -222,14 +235,107 @@ export async function getNextLesson(): Promise<Lesson | null> {
   return null;
 }
 
-async function getQuizResultSnapshot(): Promise<QuizResultSnapshot> {
-  const [completedLessons, stars, xp, streak, nextLesson] = await Promise.all([
+export async function getUnlockedBadges(): Promise<BadgeId[]> {
+  const storedValue = await AsyncStorage.getItem(UNLOCKED_BADGES_KEY);
+
+  if (!storedValue) {
+    return [];
+  }
+
+  try {
+    const parsedValue: unknown = JSON.parse(storedValue);
+
+    if (!Array.isArray(parsedValue)) {
+      return [];
+    }
+
+    const validIds = new Set(BADGES.map((badge) => badge.id));
+
+    return [
+      ...new Set(
+        parsedValue.filter(
+          (value): value is BadgeId =>
+            typeof value === 'string' && validIds.has(value as BadgeId),
+        ),
+      ),
+    ];
+  } catch {
+    return [];
+  }
+}
+
+function isModuleFullyComplete(
+  moduleId: 'alphabet' | 'numbers',
+  completedLessonIds: string[],
+): boolean {
+  const module = getLearningModule(moduleId);
+
+  if (!module) {
+    return false;
+  }
+
+  return module.lessons.every((lesson) =>
+    completedLessonIds.includes(lesson.id),
+  );
+}
+
+export async function checkAndUnlockBadges(
+  context: BadgeCheckContext = {},
+): Promise<BadgeId[]> {
+  const [unlockedBadges, completedLessons, streak, xp] = await Promise.all([
+    getUnlockedBadges(),
     getCompletedLessons(),
-    getStars(),
-    getTotalXP(),
     calculateStreak(),
-    getNextLesson(),
+    getTotalXP(),
   ]);
+
+  const unlockedSet = new Set(unlockedBadges);
+  const newlyUnlocked: BadgeId[] = [];
+  const level = getLevel(xp).level;
+  const hasPerfectScore =
+    typeof context.score === 'number' &&
+    typeof context.total === 'number' &&
+    context.total > 0 &&
+    context.score >= context.total;
+
+  const conditions: Record<BadgeId, boolean> = {
+    'first-sign': completedLessons.length >= 1,
+    'perfect-score': hasPerfectScore,
+    'alphabet-ace': isModuleFullyComplete('alphabet', completedLessons),
+    'number-pro': isModuleFullyComplete('numbers', completedLessons),
+    'on-fire': streak >= 3,
+    'rising-star': level >= 5,
+  };
+
+  for (const badge of BADGES) {
+    if (unlockedSet.has(badge.id) || !conditions[badge.id]) {
+      continue;
+    }
+
+    newlyUnlocked.push(badge.id);
+    unlockedSet.add(badge.id);
+  }
+
+  if (newlyUnlocked.length > 0) {
+    await AsyncStorage.setItem(
+      UNLOCKED_BADGES_KEY,
+      JSON.stringify([...unlockedSet]),
+    );
+  }
+
+  return newlyUnlocked;
+}
+
+async function getQuizResultSnapshot(): Promise<QuizResultSnapshot> {
+  const [completedLessons, stars, xp, streak, nextLesson, unlockedBadges] =
+    await Promise.all([
+      getCompletedLessons(),
+      getStars(),
+      getTotalXP(),
+      calculateStreak(),
+      getNextLesson(),
+      getUnlockedBadges(),
+    ]);
 
   return {
     completedLessons,
@@ -237,6 +343,7 @@ async function getQuizResultSnapshot(): Promise<QuizResultSnapshot> {
     xp,
     streak,
     nextLesson,
+    unlockedBadges,
   };
 }
 

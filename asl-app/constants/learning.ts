@@ -76,3 +76,26 @@ export function getLesson(
 
   return undefined;
 }
+
+export function isAlphabetComplete(completedLessonIds: string[]): boolean {
+  const alphabetModule = getLearningModule('alphabet');
+
+  if (!alphabetModule) {
+    return false;
+  }
+
+  return alphabetModule.lessons.every((lesson) =>
+    completedLessonIds.includes(lesson.id),
+  );
+}
+
+export function isNumbersModuleUnlocked(completedLessonIds: string[]): boolean {
+  return isAlphabetComplete(completedLessonIds);
+}
+
+export function isModuleLocked(
+  moduleId: LearningModuleId,
+  completedLessonIds: string[],
+): boolean {
+  return moduleId === 'numbers' && !isNumbersModuleUnlocked(completedLessonIds);
+}

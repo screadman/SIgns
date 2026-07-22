@@ -35,7 +35,9 @@ export function ModuleCard({
   return (
     <Pressable
       onPress={onPress}
+      disabled={locked}
       accessibilityRole="button"
+      accessibilityState={{ disabled: locked }}
       accessibilityLabel={
         locked
           ? `${module.title}, lessons locked. Complete the alphabet first`
@@ -44,7 +46,7 @@ export function ModuleCard({
       style={({ pressed }) => [
         styles.card,
         locked && styles.lockedCard,
-        pressed && styles.pressed,
+        pressed && !locked && styles.pressed,
       ]}
     >
       <View style={styles.header}>

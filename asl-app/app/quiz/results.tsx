@@ -23,7 +23,7 @@ import {
   opacity,
   spacing,
 } from '../../constants/theme';
-import { getNextLesson, saveQuizResult } from '../../lib/storage';
+import { getNextLesson, checkAndUnlockBadges, saveQuizResult } from '../../lib/storage';
 
 const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
@@ -77,6 +77,9 @@ export default function QuizResultsScreen() {
       xp,
       stars: earnedStars,
       resultId: resultId || undefined,
+    }).then(async (snapshot) => {
+      await checkAndUnlockBadges({ score, total });
+      return snapshot;
     });
   }, [earnedStars, lessonId, resultId, score, total, xp]);
 
