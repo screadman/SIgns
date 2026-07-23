@@ -1,4 +1,5 @@
 import type { Lesson } from '../constants/learning';
+import { lessonHasQuizMedia } from '../constants/learning';
 
 export type QuizFormat = 'image-to-label' | 'label-to-image';
 
@@ -16,8 +17,8 @@ function shuffle<T>(items: T[]): T[] {
   for (let index = shuffledItems.length - 1; index > 0; index -= 1) {
     const randomIndex = Math.floor(Math.random() * (index + 1));
     [shuffledItems[index], shuffledItems[randomIndex]] = [
-      shuffledItems[randomIndex],
       shuffledItems[index],
+      shuffledItems[randomIndex],
     ];
   }
 
@@ -30,12 +31,14 @@ export function generateQuiz(
 ): QuizQuestion[] {
   const requestedLesson = allItems.find((lesson) => lesson.id === lessonId);
 
-  if (!requestedLesson) {
+  if (!requestedLesson || !lessonHasQuizMedia(requestedLesson)) {
     return [];
   }
 
   const moduleItems = allItems.filter(
-    (lesson) => lesson.moduleId === requestedLesson.moduleId,
+    (lesson) =>
+      lesson.moduleId === requestedLesson.moduleId &&
+      lessonHasQuizMedia(lesson),
   );
 
   if (moduleItems.length < 4) {

@@ -1,4 +1,8 @@
 import { ASL_LETTERS, ASL_NUMBERS, type AslGlyph } from './aslLetters';
+import {
+  CONVERSATION_VIDEOS,
+  WH_QUESTION_VIDEOS,
+} from './aslVideos';
 import { CONVERSATION_SIGNS, type VocabSign } from './conversation';
 import { colors } from './theme';
 import { WH_QUESTION_SIGNS } from './whQuestions';
@@ -53,6 +57,9 @@ function createVocabLessons(
   moduleId: 'conversation' | 'wh-questions',
   signs: VocabSign[],
 ): Lesson[] {
+  const videos =
+    moduleId === 'conversation' ? CONVERSATION_VIDEOS : WH_QUESTION_VIDEOS;
+
   return signs.map((sign) => ({
     id: `${moduleId}-${sign.id}`,
     moduleId,
@@ -62,6 +69,10 @@ function createVocabLessons(
       label: sign.label,
       description: sign.description,
       tip: sign.tip,
+      video:
+        sign.id in videos
+          ? videos[sign.id as keyof typeof videos]
+          : undefined,
     },
   }));
 }
@@ -168,13 +179,20 @@ export function getModuleLessonUnit(moduleId: LearningModuleId): string {
 }
 
 export function lessonHasQuizMedia(lesson: Lesson): boolean {
-  return typeof lesson.sign.image === 'number';
+  return (
+    typeof lesson.sign.image === 'number' ||
+    typeof lesson.sign.video === 'number'
+  );
 }
 
 export function getFirstPracticeLesson(module: LearningModule): Lesson | null {
-  return (
-    module.lessons.find((lesson) => lessonHasQuizMedia(lesson)) ??
-    module.lessons[0] ??
-    null
+  const mediaLessons = module.lessons.filter((lesson) =>
+    lessonHasQuizMedia(lesson),
   );
+
+  if (mediaLessons.length < 4) {
+    return null;
+  }
+
+  return mediaLessons[0] ?? null;
 }

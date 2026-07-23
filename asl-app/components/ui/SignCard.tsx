@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { ResizeMode, Video } from 'expo-av';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
 import type { AslGlyph } from '../../constants/aslLetters';
@@ -24,6 +25,7 @@ export function SignCard({
   accessibilityPrefix = 'ASL sign for',
   featured = false,
 }: SignCardProps) {
+  const hasVideo = typeof sign.video === 'number';
   const hasImage = typeof sign.image === 'number';
 
   return (
@@ -35,7 +37,17 @@ export function SignCard({
       <View
         style={[styles.imageContainer, featured && styles.featuredImageContainer]}
       >
-        {hasImage ? (
+        {hasVideo ? (
+          <Video
+            source={sign.video}
+            style={[styles.video, featured && styles.featuredVideo]}
+            resizeMode={ResizeMode.CONTAIN}
+            shouldPlay
+            isLooping
+            isMuted
+            useNativeControls={false}
+          />
+        ) : hasImage ? (
           <Image
             source={sign.image}
             style={[styles.image, featured && styles.featuredImage]}
@@ -99,7 +111,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primarySurface,
   },
   featuredImageContainer: {
-    height: 260,
+    height: 280,
     borderRadius: borderRadius.xl,
     backgroundColor: colors.signSurface,
   },
@@ -110,6 +122,14 @@ const styles = StyleSheet.create({
   featuredImage: {
     width: 220,
     height: 220,
+  },
+  video: {
+    width: '100%',
+    height: '100%',
+  },
+  featuredVideo: {
+    width: '100%',
+    height: '100%',
   },
   mediaPlaceholder: {
     alignItems: 'center',

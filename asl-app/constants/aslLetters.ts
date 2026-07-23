@@ -3,6 +3,8 @@ export type AslGlyph = {
   label: string;
   /** Local PNG/require asset. Optional until video/GIF media is ready. */
   image?: number;
+  /** Local MP4/require asset for motion signs. */
+  video?: number;
   description: string;
   tip: string;
 };

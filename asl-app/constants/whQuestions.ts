@@ -22,8 +22,8 @@ export const WH_QUESTION_SIGNS: VocabSign[] = [
     description:
       'Index finger points up and wiggles side to side while asking where.',
     tip: 'Keep the finger in front of you, not too high.',
-    mediaStatus: 'needs-recording',
-    mediaNote: 'Needs original video/GIF under a clear free license.',
+    mediaStatus: 'ready',
+    mediaNote: 'PopSign ASL v1.0 (where), CC BY 4.0',
   },
   {
     id: 'when',
@@ -33,7 +33,7 @@ export const WH_QUESTION_SIGNS: VocabSign[] = [
       'Index finger of the dominant hand circles around the upright index of the other hand, then may land on the tip.',
     tip: 'Use the WH facial expression (eyebrows down).',
     mediaStatus: 'needs-recording',
-    mediaNote: 'Needs original video/GIF under a clear free license.',
+    mediaNote: 'PopSign v2 preview exists but full download is not published yet.',
   },
   {
     id: 'who',
@@ -42,8 +42,8 @@ export const WH_QUESTION_SIGNS: VocabSign[] = [
     description:
       'Thumb on the chin, index finger wiggles, or a small circular motion near the mouth while asking who.',
     tip: 'Pair with a questioning face so it reads clearly.',
-    mediaStatus: 'needs-recording',
-    mediaNote: 'Needs original video/GIF under a clear free license.',
+    mediaStatus: 'ready',
+    mediaNote: 'PopSign ASL v1.0 (who), CC BY 4.0',
   },
   {
     id: 'why',
@@ -52,8 +52,8 @@ export const WH_QUESTION_SIGNS: VocabSign[] = [
     description:
       'Fingertips touch the forehead then the hand opens as it moves slightly forward and down.',
     tip: 'Often used with a puzzled or questioning expression.',
-    mediaStatus: 'needs-recording',
-    mediaNote: 'Needs original video/GIF under a clear free license.',
+    mediaStatus: 'ready',
+    mediaNote: 'PopSign ASL v1.0 (why), CC BY 4.0',
   },
   {
     id: 'how',

@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { ResizeMode, Video } from 'expo-av';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
@@ -78,6 +79,16 @@ function AnswerButton({
         >
           {lesson.sign.label}
         </Text>
+      ) : typeof lesson.sign.video === 'number' ? (
+        <Video
+          source={lesson.sign.video}
+          style={styles.answerImage}
+          resizeMode={ResizeMode.CONTAIN}
+          shouldPlay
+          isLooping
+          isMuted
+          useNativeControls={false}
+        />
       ) : typeof lesson.sign.image === 'number' ? (
         <Image
           source={lesson.sign.image}
@@ -228,7 +239,20 @@ export default function QuizScreen() {
           showsVerticalScrollIndicator={false}
         >
           {currentQuestion.format === 'image-to-label' &&
-          typeof currentQuestion.prompt.sign.image === 'number' ? (
+          typeof currentQuestion.prompt.sign.video === 'number' ? (
+            <View style={styles.promptImageContainer}>
+              <Video
+                source={currentQuestion.prompt.sign.video}
+                style={styles.promptImage}
+                resizeMode={ResizeMode.CONTAIN}
+                shouldPlay
+                isLooping
+                isMuted
+                useNativeControls={false}
+              />
+            </View>
+          ) : currentQuestion.format === 'image-to-label' &&
+            typeof currentQuestion.prompt.sign.image === 'number' ? (
             <View style={styles.promptImageContainer}>
               <Image
                 source={currentQuestion.prompt.sign.image}
