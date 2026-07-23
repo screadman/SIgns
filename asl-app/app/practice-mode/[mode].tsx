@@ -1,5 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  type Href,
+  useFocusEffect,
+  useLocalSearchParams,
+  useRouter,
+} from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,7 +16,11 @@ import {
   lessonHasQuizMedia,
   type LearningModule,
 } from '../../constants/learning';
-import { getPracticeMode } from '../../constants/practice';
+import {
+  DAILY_CHALLENGES,
+  getPracticeMode,
+  type DailyChallengeDef,
+} from '../../constants/practice';
 import {
   borderRadius,
   colors,
@@ -20,6 +30,10 @@ import {
   opacity,
   spacing,
 } from '../../constants/theme';
+import {
+  getDailyChallengeProgress,
+  type DailyChallengeProgress,
+} from '../../lib/storage';
 
 function getParam(value: string | string[] | undefined): string {
   return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
@@ -47,9 +61,7 @@ function QuizModuleRow({
         pressed && enabled && styles.pressed,
       ]}
     >
-      <View
-        style={[styles.rowSwatch, { backgroundColor: module.tileColor }]}
-      />
+      <View style={[styles.rowSwatch, { backgroundColor: module.tileColor }]} />
       <View style={styles.rowCopy}>
         <Text style={[styles.rowTitle, !enabled && styles.rowTextDisabled]}>
           {module.title}
@@ -69,10 +81,79 @@ function QuizModuleRow({
   );
 }
 
+function ChallengeCard({
+  challenge,
+  progress,
+}: {
+  challenge: DailyChallengeDef;
+  progress: number;
+}) {
+  const clamped = Math.min(progress, challenge.target);
+  const ratio = challenge.target === 0 ? 0 : clamped / challenge.target;
+  const complete = clamped >= challenge.target;
+
+  return (
+    <View style={styles.challengeCard}>
+      <Text style={styles.challengeTitle}>{challenge.title}</Text>
+      <View style={styles.challengeRow}>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${ratio * 100}%` }]} />
+          <Text style={styles.progressLabel}>
+            {clamped}/{challenge.target}
+          </Text>
+        </View>
+        <View style={styles.rewardChip}>
+          <Ionicons
+            name={complete ? 'checkmark-circle' : 'flash'}
+            size={16}
+            color={complete ? colors.success : colors.warning}
+          />
+          <Text style={styles.rewardText}>{challenge.rewardXp} XP</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export default function PracticeModeScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ mode?: string | string[] }>();
   const mode = getPracticeMode(getParam(params.mode));
+  const [dailyProgress, setDailyProgress] = useState<DailyChallengeProgress>({
+    signsLearned: 0,
+    quizzesFinished: 0,
+    correctAnswers: 0,
+  });
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      async function loadChallenges() {
+        try {
+          const progress = await getDailyChallengeProgress();
+
+          if (isActive) {
+            setDailyProgress(progress);
+          }
+        } catch {
+          if (isActive) {
+            setDailyProgress({
+              signsLearned: 0,
+              quizzesFinished: 0,
+              correctAnswers: 0,
+            });
+          }
+        }
+      }
+
+      void loadChallenges();
+
+      return () => {
+        isActive = false;
+      };
+    }, []),
+  );
 
   if (!mode) {
     return (
@@ -161,6 +242,25 @@ export default function PracticeModeScreen() {
                 })}
               </View>
             </>
+          ) : mode.id === 'challenges' && mode.available ? (
+            <>
+              <View style={styles.challengeHeader}>
+                <Text style={styles.sectionTitle}>Daily challenges</Text>
+                <View style={styles.resetChip}>
+                  <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+                  <Text style={styles.resetText}>Resets daily</Text>
+                </View>
+              </View>
+              <View style={styles.challengeList}>
+                {DAILY_CHALLENGES.map((challenge) => (
+                  <ChallengeCard
+                    key={challenge.id}
+                    challenge={challenge}
+                    progress={dailyProgress[challenge.id]}
+                  />
+                ))}
+              </View>
+            </>
           ) : (
             <View style={styles.comingSoon}>
               <Ionicons
@@ -170,8 +270,8 @@ export default function PracticeModeScreen() {
               />
               <Text style={styles.comingSoonTitle}>Coming soon</Text>
               <Text style={styles.comingSoonBody}>
-                This mode is planned for a later build. Quiz is ready when a
-                collection has enough sign media.
+                This mode is planned for a later build. Quiz and Challenges are
+                ready to use now.
               </Text>
             </View>
           )}
@@ -250,6 +350,76 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodySemibold,
     fontSize: fontSize.base,
     lineHeight: 22,
+  },
+  challengeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  resetChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  resetText: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.sm,
+  },
+  challengeList: {
+    gap: spacing['2sm'],
+  },
+  challengeCard: {
+    padding: spacing.md,
+    borderRadius: borderRadius.xl,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.sm,
+  },
+  challengeTitle: {
+    color: colors.text,
+    fontFamily: fontFamily.headingExtraBold,
+    fontSize: fontSize.base,
+    lineHeight: 22,
+  },
+  challengeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  progressTrack: {
+    flex: 1,
+    height: 28,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surfaceMuted,
+    overflow: 'hidden',
+    justifyContent: 'center',
+  },
+  progressFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: colors.primarySurface,
+    borderRadius: borderRadius.full,
+  },
+  progressLabel: {
+    textAlign: 'center',
+    color: colors.text,
+    fontFamily: fontFamily.bodySemibold,
+    fontSize: fontSize.sm,
+  },
+  rewardChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minWidth: 72,
+  },
+  rewardText: {
+    color: colors.text,
+    fontFamily: fontFamily.bodySemibold,
+    fontSize: fontSize.sm,
   },
   list: {
     gap: spacing['2sm'],

@@ -1,5 +1,5 @@
 /**
- * App navigation model: Learn discovers content, Practice trains skills.
+ * App navigation model: Dictionary browses signs, Practice trains skills.
  */
 
 export type MainTabId = 'home' | 'learn' | 'practice' | 'profile';
@@ -26,7 +26,7 @@ export const MAIN_TABS: MainTab[] = [
   },
   {
     id: 'learn',
-    label: 'Learn',
+    label: 'Dictionary',
     href: '/(tabs)/learn',
     icon: 'book-outline',
     activeIcon: 'book',

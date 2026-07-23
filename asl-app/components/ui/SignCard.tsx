@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { hasMediaAsset, toImageSource, type AslGlyph } from '../../constants/aslLetters';
+import type { LearningModuleId } from '../../constants/learning';
 import {
   borderRadius,
   borderWidth,
@@ -12,19 +13,24 @@ import {
   shadows,
   spacing,
 } from '../../constants/theme';
+import { peekSignImage } from '../../lib/signImages';
 
 type SignCardProps = {
   sign: AslGlyph;
+  moduleId?: LearningModuleId;
   accessibilityPrefix?: string;
   featured?: boolean;
 };
 
 export function SignCard({
   sign,
+  moduleId,
   accessibilityPrefix = 'ASL sign for',
   featured = false,
 }: SignCardProps) {
-  const hasImage = hasMediaAsset(sign.image);
+  const imageSource =
+    toImageSource(sign.image) ?? peekSignImage(moduleId, sign.id);
+  const hasImage = hasMediaAsset(imageSource);
 
   return (
     <View
@@ -37,7 +43,7 @@ export function SignCard({
       >
         {hasImage ? (
           <Image
-            source={toImageSource(sign.image)}
+            source={imageSource}
             style={[styles.image, featured && styles.featuredImage]}
             resizeMode="contain"
             accessibilityIgnoresInvertColors

@@ -8,6 +8,7 @@ import {
   fontFamily,
   fontSize,
   opacity,
+  shadows,
   spacing,
 } from '../../constants/theme';
 
@@ -19,31 +20,27 @@ type ModuleCardProps = {
 };
 
 function ModuleGlyph({
-  moduleId,
+  module,
   locked,
 }: {
-  moduleId: LearningModule['id'];
+  module: LearningModule;
   locked: boolean;
 }) {
   const color = locked ? colors.textMuted : colors.white;
 
-  if (moduleId === 'alphabet') {
+  if (module.id === 'alphabet') {
     return <Text style={[styles.glyphText, { color }]}>ABC</Text>;
   }
 
-  if (moduleId === 'wh-questions') {
+  if (module.id === 'wh-questions') {
     return <Text style={[styles.glyphMark, { color }]}>?</Text>;
   }
 
-  if (moduleId === 'conversation') {
-    return <Ionicons name="hand-left-outline" size={32} color={color} />;
-  }
-
-  if (moduleId === 'numbers') {
+  if (module.id === 'numbers') {
     return <Text style={[styles.glyphText, { color }]}>123</Text>;
   }
 
-  return <Ionicons name="apps-outline" size={30} color={color} />;
+  return <Ionicons name={module.icon} size={34} color={color} />;
 }
 
 export function ModuleCard({
@@ -81,7 +78,7 @@ export function ModuleCard({
             <Ionicons name="lock-closed" size={16} color={colors.white} />
           </View>
         ) : (
-          <ModuleGlyph moduleId={module.id} locked={locked} />
+          <ModuleGlyph module={module} locked={locked} />
         )}
       </View>
 
@@ -96,32 +93,32 @@ export function ModuleCard({
 
 const styles = StyleSheet.create({
   card: {
-    width: '47.5%',
-    aspectRatio: 1.35,
+    width: '45%',
+    aspectRatio: 1.55,
     borderRadius: borderRadius.xl,
-    padding: spacing['2sm'],
+    padding: spacing.sm,
     justifyContent: 'space-between',
-    overflow: 'hidden',
+    ...shadows.md,
   },
   pressed: {
     opacity: opacity.pressed,
   },
   glyphWrap: {
     alignSelf: 'flex-end',
-    minHeight: 36,
+    minHeight: 38,
     alignItems: 'center',
     justifyContent: 'center',
   },
   glyphText: {
     fontFamily: fontFamily.headingExtraBold,
-    fontSize: 22,
-    lineHeight: 26,
+    fontSize: 26,
+    lineHeight: 30,
     letterSpacing: -0.6,
   },
   glyphMark: {
     fontFamily: fontFamily.headingExtraBold,
-    fontSize: 36,
-    lineHeight: 40,
+    fontSize: 40,
+    lineHeight: 44,
   },
   lockBadge: {
     width: 32,
@@ -135,7 +132,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     maxWidth: '100%',
     paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.xs + 1,
+    paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
     backgroundColor: colors.white,
   },

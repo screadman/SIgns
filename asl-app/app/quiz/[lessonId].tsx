@@ -12,7 +12,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LearningBottomNav } from '../../components/ui';
-import { hasMediaAsset, toImageSource } from '../../constants/aslLetters';
 import { LEARNING_MODULES, type Lesson } from '../../constants/learning';
 import {
   borderRadius,
@@ -30,6 +29,10 @@ import {
   getQuizXp,
   type QuizFormat,
 } from '../../lib/quiz';
+import {
+  getLessonImageSource,
+  lessonHasSignImage,
+} from '../../lib/signImages';
 
 const ALL_LESSONS = LEARNING_MODULES.flatMap((module) => module.lessons);
 
@@ -52,6 +55,8 @@ function AnswerButton({
   disabled: boolean;
   onPress: () => void;
 }) {
+  const imageSource = getLessonImageSource(lesson);
+
   return (
     <Pressable
       onPress={onPress}
@@ -79,9 +84,9 @@ function AnswerButton({
         >
           {lesson.sign.label}
         </Text>
-      ) : hasMediaAsset(lesson.sign.image) ? (
+      ) : imageSource ? (
         <Image
-          source={toImageSource(lesson.sign.image)}
+          source={imageSource}
           style={styles.answerImage}
           resizeMode="contain"
           accessibilityIgnoresInvertColors
@@ -229,10 +234,11 @@ export default function QuizScreen() {
           showsVerticalScrollIndicator={false}
         >
           {currentQuestion.format === 'image-to-label' &&
-          hasMediaAsset(currentQuestion.prompt.sign.image) ? (
+          lessonHasSignImage(currentQuestion.prompt) &&
+          getLessonImageSource(currentQuestion.prompt) ? (
             <View style={styles.promptImageContainer}>
               <Image
-                source={toImageSource(currentQuestion.prompt.sign.image)}
+                source={getLessonImageSource(currentQuestion.prompt)}
                 style={styles.promptImage}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors

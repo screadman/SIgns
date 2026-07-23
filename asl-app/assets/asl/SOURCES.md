@@ -16,12 +16,17 @@ App media is illustrations / stills only (no video).
 | Licence | Domaine public |
 | Stockage | `assets/asl/numbers/` |
 
-## Conversation / WH Questions
+## Dictionary categories
 
-No media assets yet. Lessons use text descriptions and an "Illustration coming soon" placeholder until verified ASL art is added.
+Core packs with real stills: Alphabet, Numbers.
+Other packs (Conversation, Questions, Emotions, Animals, Food, Body parts, Work, Internet, School, Sports): gloss + tip text only for now. Lessons show "Illustration coming soon".
+
+Favorites are stored locally (`favorite_lesson_ids` in AsyncStorage).
 
 ## Mapping
 
 - Alphabet / Numbers: `asl-app/constants/aslLetters.ts`
 - Conversation: `asl-app/constants/conversation.ts`
-- WH Questions: `asl-app/constants/whQuestions.ts`
+- Questions: `asl-app/constants/whQuestions.ts`
+- Extra categories: `asl-app/constants/dictionaryCategories.ts`
+- Modules: `asl-app/constants/learning.ts`

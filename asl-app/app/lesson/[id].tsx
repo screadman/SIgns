@@ -167,6 +167,7 @@ export default function LessonScreen() {
         >
           <SignCard
             sign={lesson.sign}
+            moduleId={lesson.moduleId}
             accessibilityPrefix={accessibilityPrefix}
             featured
           />

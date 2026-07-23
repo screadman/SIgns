@@ -1,5 +1,15 @@
 import { ASL_LETTERS, ASL_NUMBERS, hasMediaAsset, type AslGlyph } from './aslLetters';
 import { CONVERSATION_SIGNS, type VocabSign } from './conversation';
+import {
+  ANIMALS_SIGNS,
+  BODY_PARTS_SIGNS,
+  EMOTIONS_SIGNS,
+  FOOD_SIGNS,
+  INTERNET_SIGNS,
+  SCHOOL_SIGNS,
+  SPORTS_SIGNS,
+  WORK_SIGNS,
+} from './dictionaryCategories';
 import { colors } from './theme';
 import { WH_QUESTION_SIGNS } from './whQuestions';
 
@@ -7,13 +17,29 @@ export type LearningModuleId =
   | 'alphabet'
   | 'conversation'
   | 'wh-questions'
-  | 'numbers';
+  | 'numbers'
+  | 'emotions'
+  | 'animals'
+  | 'food'
+  | 'body-parts'
+  | 'work'
+  | 'internet'
+  | 'school'
+  | 'sports';
 
 export type LearningModuleIcon =
   | 'close-circle-outline'
   | 'apps-outline'
   | 'chatbubbles-outline'
-  | 'help-circle-outline';
+  | 'help-circle-outline'
+  | 'happy-outline'
+  | 'paw-outline'
+  | 'restaurant-outline'
+  | 'body-outline'
+  | 'briefcase-outline'
+  | 'globe-outline'
+  | 'school-outline'
+  | 'football-outline';
 
 export type Lesson = {
   id: string;
@@ -29,12 +55,14 @@ export type LearningModule = {
   icon: LearningModuleIcon;
   color: string;
   surfaceColor: string;
-  /** Solid fill for the Learn grid tile. */
+  /** Solid fill for the Dictionary grid tile. */
   tileColor: string;
   /** When true, module screen uses a vertical sign list instead of letter bubbles. */
   listLayout: boolean;
   lessons: Lesson[];
 };
+
+type VocabModuleId = Exclude<LearningModuleId, 'alphabet' | 'numbers'>;
 
 function createGlyphLessons(
   moduleId: 'alphabet' | 'numbers',
@@ -49,10 +77,7 @@ function createGlyphLessons(
   }));
 }
 
-function createVocabLessons(
-  moduleId: 'conversation' | 'wh-questions',
-  signs: VocabSign[],
-): Lesson[] {
+function createVocabLessons(moduleId: VocabModuleId, signs: VocabSign[]): Lesson[] {
   return signs.map((sign) => ({
     id: `${moduleId}-${sign.id}`,
     moduleId,
@@ -64,6 +89,29 @@ function createVocabLessons(
       tip: sign.tip,
     },
   }));
+}
+
+function vocabModule(
+  id: VocabModuleId,
+  title: string,
+  description: string,
+  icon: LearningModuleIcon,
+  tileColor: string,
+  color: string,
+  surfaceColor: string,
+  signs: VocabSign[],
+): LearningModule {
+  return {
+    id,
+    title,
+    description,
+    icon,
+    color,
+    surfaceColor,
+    tileColor,
+    listLayout: true,
+    lessons: createVocabLessons(id, signs),
+  };
 }
 
 export const LEARNING_MODULES: LearningModule[] = [
@@ -78,28 +126,26 @@ export const LEARNING_MODULES: LearningModule[] = [
     listLayout: false,
     lessons: createGlyphLessons('alphabet', ASL_LETTERS, 'Letter'),
   },
-  {
-    id: 'wh-questions',
-    title: 'WH Questions',
-    description: 'Ask what, where, when, who, why, how, and common question phrases.',
-    icon: 'help-circle-outline',
-    color: '#0D9488',
-    surfaceColor: '#F0FDFA',
-    tileColor: '#2DD4BF',
-    listLayout: true,
-    lessons: createVocabLessons('wh-questions', WH_QUESTION_SIGNS),
-  },
-  {
-    id: 'conversation',
-    title: 'Conversation',
-    description: 'Greetings and everyday courtesy signs for first conversations.',
-    icon: 'chatbubbles-outline',
-    color: colors.secondary,
-    surfaceColor: '#EFF6FF',
-    tileColor: '#FB7185',
-    listLayout: true,
-    lessons: createVocabLessons('conversation', CONVERSATION_SIGNS),
-  },
+  vocabModule(
+    'wh-questions',
+    'Questions',
+    'Ask what, where, when, who, why, how, and common question phrases.',
+    'help-circle-outline',
+    '#2DD4BF',
+    '#0D9488',
+    '#F0FDFA',
+    WH_QUESTION_SIGNS,
+  ),
+  vocabModule(
+    'conversation',
+    'Conversation',
+    'Greetings and everyday courtesy signs for first conversations.',
+    'chatbubbles-outline',
+    '#FB7185',
+    colors.secondary,
+    '#EFF6FF',
+    CONVERSATION_SIGNS,
+  ),
   {
     id: 'numbers',
     title: 'Numbers',
@@ -111,10 +157,94 @@ export const LEARNING_MODULES: LearningModule[] = [
     listLayout: false,
     lessons: createGlyphLessons('numbers', ASL_NUMBERS, 'Number'),
   },
+  vocabModule(
+    'emotions',
+    'Emotions',
+    'Feelings and facial expression based signs.',
+    'happy-outline',
+    '#A7F3D0',
+    '#059669',
+    '#ECFDF5',
+    EMOTIONS_SIGNS,
+  ),
+  vocabModule(
+    'animals',
+    'Animals',
+    'Common animal signs for everyday talk.',
+    'paw-outline',
+    '#BFDBFE',
+    '#2563EB',
+    '#EFF6FF',
+    ANIMALS_SIGNS,
+  ),
+  vocabModule(
+    'food',
+    'Food',
+    'Eating, drinking, and basic food vocabulary.',
+    'restaurant-outline',
+    '#BBF7D0',
+    '#16A34A',
+    '#F0FDF4',
+    FOOD_SIGNS,
+  ),
+  vocabModule(
+    'body-parts',
+    'Body parts',
+    'Name parts of the body in ASL.',
+    'body-outline',
+    '#BAE6FD',
+    '#0284C7',
+    '#F0F9FF',
+    BODY_PARTS_SIGNS,
+  ),
+  vocabModule(
+    'work',
+    'Work',
+    'Job, office, and workplace signs.',
+    'briefcase-outline',
+    '#C7D2FE',
+    '#4F46E5',
+    '#EEF2FF',
+    WORK_SIGNS,
+  ),
+  vocabModule(
+    'internet',
+    'Internet',
+    'Online, messaging, and tech signs.',
+    'globe-outline',
+    '#A7F3D0',
+    '#0D9488',
+    '#F0FDFA',
+    INTERNET_SIGNS,
+  ),
+  vocabModule(
+    'school',
+    'School',
+    'Classroom and learning vocabulary.',
+    'school-outline',
+    '#BFDBFE',
+    '#2563EB',
+    '#EFF6FF',
+    SCHOOL_SIGNS,
+  ),
+  vocabModule(
+    'sports',
+    'Sports',
+    'Play, movement, and sports vocabulary.',
+    'football-outline',
+    '#BBF7D0',
+    '#15803D',
+    '#F0FDF4',
+    SPORTS_SIGNS,
+  ),
 ];
 
 export function getLearningModule(moduleId: string): LearningModule | undefined {
   return LEARNING_MODULES.find((module) => module.id === moduleId);
+}
+
+export function getAllLessons(): Lesson[] {
+  return LEARNING_MODULES.flatMap((module) => module.lessons);
 }
 
 export function getLesson(
@@ -147,7 +277,7 @@ export function isAlphabetComplete(completedLessonIds: string[]): boolean {
   );
 }
 
-/** All core modules stay open for free browsing. */
+/** All dictionary modules stay open for free browsing. */
 export function isModuleLocked(
   _moduleId: LearningModuleId,
   _completedLessonIds: string[],
@@ -168,6 +298,10 @@ export function getModuleLessonUnit(moduleId: LearningModuleId): string {
 }
 
 export function lessonHasQuizMedia(lesson: Lesson): boolean {
+  if (lesson.moduleId === 'alphabet' || lesson.moduleId === 'numbers') {
+    return true;
+  }
+
   return hasMediaAsset(lesson.sign.image);
 }
 

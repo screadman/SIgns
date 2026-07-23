@@ -17,6 +17,20 @@ export const XP_KEY = 'xp';
 export const ACTIVITY_DATES_KEY = 'activity_dates';
 export const LAST_QUIZ_RESULT_ID_KEY = 'last_quiz_result_id';
 export const UNLOCKED_BADGES_KEY = 'unlocked_badges';
+export const FAVORITE_LESSONS_KEY = 'favorite_lesson_ids';
+export const DAILY_CHALLENGES_PREFIX = 'daily_challenges_';
+
+export type DailyChallengeProgress = {
+  signsLearned: number;
+  quizzesFinished: number;
+  correctAnswers: number;
+};
+
+const EMPTY_DAILY_PROGRESS: DailyChallengeProgress = {
+  signsLearned: 0,
+  quizzesFinished: 0,
+  correctAnswers: 0,
+};
 
 export type QuizResultInput = {
   lessonId: string;
@@ -99,8 +113,116 @@ export async function saveCompletedLesson(lessonId: string): Promise<string[]> {
     COMPLETED_LESSONS_KEY,
     JSON.stringify(updatedLessons),
   );
+  await recordDailyChallengeProgress({ signsLearned: 1 });
 
   return updatedLessons;
+}
+
+export async function getFavoriteLessons(): Promise<string[]> {
+  const storedValue = await AsyncStorage.getItem(FAVORITE_LESSONS_KEY);
+
+  if (!storedValue) {
+    return [];
+  }
+
+  try {
+    const parsedValue: unknown = JSON.parse(storedValue);
+
+    if (!Array.isArray(parsedValue)) {
+      return [];
+    }
+
+    const lessonIds = parsedValue.filter(
+      (lessonId): lessonId is string => typeof lessonId === 'string',
+    );
+
+    return [...new Set(lessonIds)];
+  } catch {
+    return [];
+  }
+}
+
+export function isFavoriteLesson(
+  lessonId: string,
+  favoriteLessonIds: string[],
+): boolean {
+  return favoriteLessonIds.includes(lessonId);
+}
+
+export async function toggleFavoriteLesson(lessonId: string): Promise<string[]> {
+  const normalizedLessonId = lessonId.trim();
+
+  if (!normalizedLessonId) {
+    return getFavoriteLessons();
+  }
+
+  const favorites = await getFavoriteLessons();
+  const updatedFavorites = favorites.includes(normalizedLessonId)
+    ? favorites.filter((id) => id !== normalizedLessonId)
+    : [...favorites, normalizedLessonId];
+
+  await AsyncStorage.setItem(
+    FAVORITE_LESSONS_KEY,
+    JSON.stringify(updatedFavorites),
+  );
+
+  return updatedFavorites;
+}
+
+function dailyChallengeStorageKey(dayKey = toDayKey(new Date())): string {
+  return `${DAILY_CHALLENGES_PREFIX}${dayKey}`;
+}
+
+export async function getDailyChallengeProgress(): Promise<DailyChallengeProgress> {
+  const storedValue = await AsyncStorage.getItem(dailyChallengeStorageKey());
+
+  if (!storedValue) {
+    return { ...EMPTY_DAILY_PROGRESS };
+  }
+
+  try {
+    const parsedValue: unknown = JSON.parse(storedValue);
+
+    if (!parsedValue || typeof parsedValue !== 'object') {
+      return { ...EMPTY_DAILY_PROGRESS };
+    }
+
+    const record = parsedValue as Record<string, unknown>;
+
+    return {
+      signsLearned: Math.max(0, Math.floor(Number(record.signsLearned) || 0)),
+      quizzesFinished: Math.max(
+        0,
+        Math.floor(Number(record.quizzesFinished) || 0),
+      ),
+      correctAnswers: Math.max(
+        0,
+        Math.floor(Number(record.correctAnswers) || 0),
+      ),
+    };
+  } catch {
+    return { ...EMPTY_DAILY_PROGRESS };
+  }
+}
+
+export async function recordDailyChallengeProgress(
+  delta: Partial<DailyChallengeProgress>,
+): Promise<DailyChallengeProgress> {
+  const current = await getDailyChallengeProgress();
+  const updated: DailyChallengeProgress = {
+    signsLearned: current.signsLearned + Math.max(0, delta.signsLearned ?? 0),
+    quizzesFinished:
+      current.quizzesFinished + Math.max(0, delta.quizzesFinished ?? 0),
+    correctAnswers:
+      current.correctAnswers + Math.max(0, delta.correctAnswers ?? 0),
+  };
+
+  await AsyncStorage.setItem(
+    dailyChallengeStorageKey(),
+    JSON.stringify(updated),
+  );
+
+  return updated;
 }
 
 export async function getStars(): Promise<number> {
@@ -265,7 +387,7 @@ export async function getUnlockedBadges(): Promise<BadgeId[]> {
 }
 
 function isModuleFullyComplete(
-  moduleId: 'alphabet' | 'numbers' | 'conversation' | 'wh-questions',
+  moduleId: 'alphabet' | 'numbers',
   completedLessonIds: string[],
 ): boolean {
   const module = getLearningModule(moduleId);
@@ -371,6 +493,10 @@ export async function saveQuizResult(
   await addStars(stars);
   await addXP(xp);
   await recordActivityToday();
+  await recordDailyChallengeProgress({
+    quizzesFinished: 1,
+    correctAnswers: Math.max(0, Math.floor(input.score)),
+  });
   await AsyncStorage.setItem(LAST_QUIZ_RESULT_ID_KEY, resultId);
 
   return getQuizResultSnapshot();
