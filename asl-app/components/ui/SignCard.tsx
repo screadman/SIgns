@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
 import type { AslGlyph } from '../../constants/aslLetters';
@@ -23,6 +24,8 @@ export function SignCard({
   accessibilityPrefix = 'ASL sign for',
   featured = false,
 }: SignCardProps) {
+  const hasImage = typeof sign.image === 'number';
+
   return (
     <View
       style={[styles.card, featured && styles.featuredCard]}
@@ -32,12 +35,23 @@ export function SignCard({
       <View
         style={[styles.imageContainer, featured && styles.featuredImageContainer]}
       >
-        <Image
-          source={sign.image}
-          style={[styles.image, featured && styles.featuredImage]}
-          resizeMode="contain"
-          accessibilityIgnoresInvertColors
-        />
+        {hasImage ? (
+          <Image
+            source={sign.image}
+            style={[styles.image, featured && styles.featuredImage]}
+            resizeMode="contain"
+            accessibilityIgnoresInvertColors
+          />
+        ) : (
+          <View style={styles.mediaPlaceholder}>
+            <Ionicons
+              name="videocam-outline"
+              size={featured ? 40 : 28}
+              color={colors.textMuted}
+            />
+            <Text style={styles.mediaPlaceholderText}>Video coming soon</Text>
+          </View>
+        )}
       </View>
 
       <Text style={[styles.label, featured && styles.featuredLabel]}>
@@ -46,6 +60,9 @@ export function SignCard({
       <Text style={[styles.description, featured && styles.featuredDescription]}>
         {sign.description}
       </Text>
+      {featured && sign.tip ? (
+        <Text style={styles.tip}>{sign.tip}</Text>
+      ) : null}
     </View>
   );
 }
@@ -94,6 +111,19 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
   },
+  mediaPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  mediaPlaceholderText: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: fontSize.sm,
+    lineHeight: lineHeight.sm,
+    textAlign: 'center',
+  },
   label: {
     color: colors.primary,
     fontFamily: fontFamily.headingExtraBold,
@@ -102,9 +132,10 @@ const styles = StyleSheet.create({
     marginTop: spacing['2sm'],
   },
   featuredLabel: {
-    fontSize: 64,
-    lineHeight: 81,
+    fontSize: 40,
+    lineHeight: 48,
     marginTop: spacing['2md'],
+    textAlign: 'center',
   },
   description: {
     color: colors.textMuted,
@@ -121,5 +152,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     marginTop: spacing['2md'],
+  },
+  tip: {
+    width: '100%',
+    maxWidth: 342,
+    marginTop: spacing.md,
+    color: colors.textMuted,
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.sm,
+    lineHeight: lineHeight.sm,
+    textAlign: 'center',
   },
 });

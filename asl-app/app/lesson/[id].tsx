@@ -1,15 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   LearningBottomNav,
-  PrimaryButton,
-  ProgressBar,
   SignCard,
 } from '../../components/ui';
-import { getLesson } from '../../constants/learning';
+import { getLesson, lessonHasQuizMedia } from '../../constants/learning';
 import {
   borderRadius,
   colors,
@@ -18,6 +17,7 @@ import {
   opacity,
   spacing,
 } from '../../constants/theme';
+import { saveCompletedLesson } from '../../lib/storage';
 
 function getParam(value: string | string[] | undefined): string {
   return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
@@ -27,6 +27,7 @@ export default function LessonScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const lessonData = getLesson(getParam(params.id));
+  const [isSaving, setIsSaving] = useState(false);
 
   if (!lessonData) {
     return (
@@ -42,6 +43,35 @@ export default function LessonScreen() {
   }
 
   const { lesson, module, lessonIndex } = lessonData;
+  const canQuiz = lessonHasQuizMedia(lesson);
+  const previousLesson = module.lessons[lessonIndex - 1];
+  const nextLesson = module.lessons[lessonIndex + 1];
+
+  const accessibilityPrefix =
+    lesson.moduleId === 'alphabet'
+      ? 'ASL sign for letter'
+      : lesson.moduleId === 'numbers'
+        ? 'ASL sign for number'
+        : 'ASL sign for';
+
+  async function markLearned() {
+    if (isSaving) {
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      await saveCompletedLesson(lesson.id);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function goToNeighbor(targetId: string) {
+    await markLearned();
+    router.replace(`/lesson/${targetId}` as Href);
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -62,33 +92,8 @@ export default function LessonScreen() {
               <Ionicons name="arrow-back" size={18} color={colors.text} />
             </Pressable>
 
-            <View>
-              <Text style={styles.title}>{lesson.title}</Text>
-              <Text style={styles.step}>
-                Step {lessonIndex + 1} of {module.lessons.length}
-              </Text>
-            </View>
+            <Text style={styles.title}>{module.title}</Text>
           </View>
-
-          <View style={styles.hearts} accessibilityLabel="3 lives">
-            {[0, 1, 2].map((heart) => (
-              <Ionicons
-                key={heart}
-                name="heart-outline"
-                size={22}
-                color={colors.accent}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.headerProgressContainer}>
-          <ProgressBar
-            progress={(lessonIndex + 1) / module.lessons.length}
-            color={colors.primary}
-            trackColor={colors.primarySurface}
-            style={styles.headerProgress}
-          />
         </View>
 
         <ScrollView
@@ -98,20 +103,121 @@ export default function LessonScreen() {
         >
           <SignCard
             sign={lesson.sign}
-            accessibilityPrefix={
-              lesson.moduleId === 'alphabet'
-                ? 'ASL sign for letter'
-                : 'ASL sign for number'
-            }
+            accessibilityPrefix={accessibilityPrefix}
             featured
           />
-
-          <PrimaryButton
-            title="Practice"
-            fullWidth
-            onPress={() => router.push(`/quiz/${lesson.id}` as Href)}
-          />
         </ScrollView>
+
+        <View style={styles.bottomPanel}>
+          <View style={styles.signNav}>
+            <Pressable
+              disabled={!previousLesson}
+              onPress={() => {
+                if (previousLesson) {
+                  void goToNeighbor(previousLesson.id);
+                }
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Previous sign"
+              style={({ pressed }) => [
+                styles.navArrow,
+                !previousLesson && styles.navArrowDisabled,
+                pressed && previousLesson && styles.pressed,
+              ]}
+            >
+              <Ionicons
+                name="arrow-back"
+                size={20}
+                color={previousLesson ? colors.text : colors.disabled}
+              />
+            </Pressable>
+
+            <View style={styles.currentSign}>
+              <Text style={styles.currentSignLabel}>Current sign</Text>
+              <Text style={styles.currentSignValue}>{lesson.sign.label}</Text>
+            </View>
+
+            <Pressable
+              disabled={!nextLesson}
+              onPress={() => {
+                if (nextLesson) {
+                  void goToNeighbor(nextLesson.id);
+                }
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Next sign"
+              style={({ pressed }) => [
+                styles.navArrow,
+                !nextLesson && styles.navArrowDisabled,
+                pressed && nextLesson && styles.pressed,
+              ]}
+            >
+              <Ionicons
+                name="arrow-forward"
+                size={20}
+                color={nextLesson ? colors.text : colors.disabled}
+              />
+            </Pressable>
+          </View>
+
+          <View style={styles.actions}>
+            <Pressable
+              disabled={!canQuiz}
+              onPress={() => {
+                if (!canQuiz) {
+                  return;
+                }
+
+                void markLearned().then(() => {
+                  router.push(`/quiz/${lesson.id}` as Href);
+                });
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Optional practice"
+              accessibilityState={{ disabled: !canQuiz }}
+              style={({ pressed }) => [
+                styles.actionButton,
+                !canQuiz && styles.actionButtonDisabled,
+                pressed && canQuiz && styles.pressed,
+              ]}
+            >
+              <Ionicons
+                name="flash"
+                size={26}
+                color={canQuiz ? colors.accent : colors.textMuted}
+              />
+              <Text
+                style={[
+                  styles.actionLabel,
+                  !canQuiz && styles.actionLabelDisabled,
+                ]}
+              >
+                Practice
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                void markLearned();
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Mark as learned"
+              style={({ pressed }) => [
+                styles.actionButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={26}
+                color={colors.success}
+              />
+              <Text style={styles.actionLabel}>
+                {isSaving ? 'Saving...' : 'Got it'}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
       </View>
       <LearningBottomNav />
     </SafeAreaView>
@@ -127,7 +233,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    height: 64,
+    height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -153,26 +259,8 @@ const styles = StyleSheet.create({
   title: {
     color: colors.text,
     fontFamily: fontFamily.headingExtraBold,
-    fontSize: fontSize.lg,
-    lineHeight: 23,
-  },
-  step: {
-    marginTop: 2,
-    color: colors.textMuted,
-    fontFamily: fontFamily.body,
-    fontSize: fontSize.xs,
-    lineHeight: 15,
-  },
-  hearts: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  headerProgressContainer: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
-  headerProgress: {
-    height: 6,
+    fontSize: fontSize.xl,
+    lineHeight: 26,
   },
   content: {
     flex: 1,
@@ -180,7 +268,77 @@ const styles = StyleSheet.create({
   contentContainer: {
     alignItems: 'center',
     gap: spacing['2md'],
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  bottomPanel: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    backgroundColor: colors.surfaceElevated,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    gap: spacing.md,
+  },
+  signNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  navArrow: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surfaceMuted,
+  },
+  navArrowDisabled: {
+    opacity: opacity.disabled,
+  },
+  currentSign: {
+    alignItems: 'center',
+    flex: 1,
+    paddingHorizontal: spacing.sm,
+  },
+  currentSignLabel: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.xs,
+    lineHeight: 15,
+  },
+  currentSignValue: {
+    marginTop: 2,
+    color: colors.text,
+    fontFamily: fontFamily.headingExtraBold,
+    fontSize: fontSize.lg,
+    lineHeight: 23,
+    textAlign: 'center',
+  },
+  actions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingBottom: spacing.xs,
+  },
+  actionButton: {
+    alignItems: 'center',
+    gap: spacing.xs,
+    minWidth: 96,
+    paddingVertical: spacing.sm,
+  },
+  actionButtonDisabled: {
+    opacity: opacity.muted,
+  },
+  actionLabel: {
+    color: colors.text,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: fontSize.sm,
+    lineHeight: 18,
+  },
+  actionLabelDisabled: {
+    color: colors.textMuted,
   },
   notFound: {
     flex: 1,

@@ -18,8 +18,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LearningBottomNav } from '../../components/ui';
 import {
+  getFirstPracticeLesson,
   getLearningModule,
-  isModuleLocked as isLearningModuleLocked,
+  lessonHasQuizMedia,
 } from '../../constants/learning';
 import {
   borderRadius,
@@ -90,13 +91,9 @@ export default function ModuleScreen() {
   const completedCount = module.lessons.filter((lesson) =>
     completedLessonIds.includes(lesson.id),
   ).length;
-  const currentLessonIndex = module.lessons.findIndex(
-    (lesson) => !completedLessonIds.includes(lesson.id),
-  );
-  const isModuleLocked = isLearningModuleLocked(
-    module.id,
-    completedLessonIds,
-  );
+  const practiceLesson = getFirstPracticeLesson(module);
+  const canPractice =
+    practiceLesson !== null && lessonHasQuizMedia(practiceLesson);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -136,71 +133,144 @@ export default function ModuleScreen() {
               color={colors.primary}
             />
           ) : (
-            <View style={styles.grid}>
-              {module.lessons.map((lesson, index) => {
-                const isCompleted = completedLessonIds.includes(lesson.id);
-                const isCurrent =
-                  !isModuleLocked &&
-                  (currentLessonIndex === index ||
-                    (currentLessonIndex === -1 &&
-                      index === module.lessons.length - 1));
-                const isLocked =
-                  isModuleLocked || (!isCompleted && !isCurrent);
+            <>
+              <Pressable
+                disabled={!canPractice}
+                onPress={() => {
+                  if (!practiceLesson || !canPractice) {
+                    return;
+                  }
 
-                return (
-                  <Pressable
-                    key={lesson.id}
-                    disabled={isLocked}
-                    onPress={() =>
-                      router.push(`/lesson/${lesson.id}` as Href)
-                    }
-                    accessibilityRole="button"
-                    accessibilityState={{ disabled: isLocked }}
-                    accessibilityLabel={`${lesson.title}, ${
-                      isCompleted
-                        ? 'completed'
-                        : isCurrent
-                          ? 'available'
-                          : 'locked'
-                    }`}
-                    style={({ pressed }) => [
-                      styles.bubble,
-                      isCompleted && styles.completedBubble,
-                      isCurrent && !isCompleted && styles.currentBubble,
-                      isLocked && styles.lockedBubble,
-                      pressed && !isLocked && styles.pressed,
+                  router.push(`/quiz/${practiceLesson.id}` as Href);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Start optional practice"
+                accessibilityState={{ disabled: !canPractice }}
+                style={({ pressed }) => [
+                  styles.practiceCard,
+                  !canPractice && styles.practiceCardDisabled,
+                  pressed && canPractice && styles.pressed,
+                ]}
+              >
+                <View style={styles.practiceCopy}>
+                  <Text
+                    style={[
+                      styles.practiceEyebrow,
+                      !canPractice && styles.practiceTextDisabled,
                     ]}
                   >
-                    {isLocked ? (
-                      <Ionicons
-                        name="lock-closed-outline"
-                        size={14}
-                        color={colors.textMuted}
-                      />
-                    ) : (
-                      <>
+                    Let&apos;s put it into practice
+                  </Text>
+                  <Text
+                    style={[
+                      styles.practiceTitle,
+                      !canPractice && styles.practiceTextDisabled,
+                    ]}
+                  >
+                    {canPractice ? 'Ready, set, go' : 'Practice coming soon'}
+                  </Text>
+                </View>
+                <View style={styles.practiceIconWrap}>
+                  <Ionicons
+                    name="flash"
+                    size={28}
+                    color={canPractice ? colors.white : colors.textMuted}
+                  />
+                </View>
+              </Pressable>
+
+              <Text style={styles.sectionTitle}>Signs in collection</Text>
+
+              {module.listLayout ? (
+                <View style={styles.signList}>
+                  {module.lessons.map((lesson) => {
+                    const isCompleted = completedLessonIds.includes(lesson.id);
+
+                    return (
+                      <Pressable
+                        key={lesson.id}
+                        onPress={() =>
+                          router.push(`/lesson/${lesson.id}` as Href)
+                        }
+                        accessibilityRole="button"
+                        accessibilityLabel={`${lesson.title}${
+                          isCompleted ? ', completed' : ''
+                        }`}
+                        style={({ pressed }) => [
+                          styles.signRow,
+                          isCompleted && styles.completedSignRow,
+                          pressed && styles.pressed,
+                        ]}
+                      >
                         <Text
                           style={[
-                            styles.bubbleLabel,
+                            styles.signRowLabel,
                             isCompleted && styles.completedLabel,
-                            isCurrent && !isCompleted && styles.currentLabel,
                           ]}
                         >
                           {lesson.sign.label}
                         </Text>
-                        {isCompleted && (
+                        {isCompleted ? (
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={18}
+                            color={colors.success}
+                          />
+                        ) : (
+                          <Ionicons
+                            name="chevron-forward"
+                            size={18}
+                            color={colors.textMuted}
+                          />
+                        )}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : (
+                <View style={styles.grid}>
+                  {module.lessons.map((lesson) => {
+                    const isCompleted = completedLessonIds.includes(lesson.id);
+
+                    return (
+                      <Pressable
+                        key={lesson.id}
+                        onPress={() =>
+                          router.push(`/lesson/${lesson.id}` as Href)
+                        }
+                        accessibilityRole="button"
+                        accessibilityLabel={`${lesson.title}${
+                          isCompleted ? ', completed' : ''
+                        }`}
+                        style={({ pressed }) => [
+                          styles.bubble,
+                          isCompleted
+                            ? styles.completedBubble
+                            : styles.openBubble,
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.bubbleLabel,
+                            isCompleted && styles.completedLabel,
+                          ]}
+                        >
+                          {lesson.sign.label}
+                        </Text>
+                        {isCompleted ? (
                           <Ionicons
                             name="checkmark"
                             size={10}
                             color={colors.success}
                           />
-                        )}
-                      </>
-                    )}
-                  </Pressable>
-                );
-              })}
-            </View>
+                        ) : null}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
+            </>
           )}
         </ScrollView>
       </View>
@@ -265,9 +335,59 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    paddingBottom: spacing['2xl'],
   },
   loader: {
     marginTop: spacing.xl,
+  },
+  practiceCard: {
+    minHeight: 88,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.lg,
+    borderRadius: borderRadius.xl,
+    backgroundColor: colors.accent,
+  },
+  practiceCardDisabled: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  practiceCopy: {
+    flex: 1,
+    marginRight: spacing.md,
+    gap: 4,
+  },
+  practiceEyebrow: {
+    color: colors.white,
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.sm,
+    lineHeight: 18,
+  },
+  practiceTitle: {
+    color: colors.white,
+    fontFamily: fontFamily.headingExtraBold,
+    fontSize: fontSize.xl,
+    lineHeight: 26,
+  },
+  practiceTextDisabled: {
+    color: colors.textMuted,
+  },
+  practiceIconWrap: {
+    width: 52,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: borderRadius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+  },
+  sectionTitle: {
+    marginBottom: spacing['2sm'],
+    color: colors.text,
+    fontFamily: fontFamily.bodySemibold,
+    fontSize: fontSize.base,
+    lineHeight: 22,
   },
   grid: {
     width: 288,
@@ -277,6 +397,29 @@ const styles = StyleSheet.create({
     gap: spacing['2sm'],
     paddingVertical: spacing.sm,
   },
+  signList: {
+    width: '100%',
+  },
+  signRow: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing['2sm'],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  completedSignRow: {
+    borderBottomColor: colors.border,
+  },
+  signRowLabel: {
+    flex: 1,
+    marginRight: spacing.sm,
+    color: colors.text,
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.base,
+    lineHeight: 22,
+  },
   bubble: {
     width: 48,
     height: 48,
@@ -284,14 +427,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: borderRadius.full,
   },
+  openBubble: {
+    backgroundColor: colors.primarySurface,
+  },
   completedBubble: {
     backgroundColor: colors.successSurface,
-  },
-  currentBubble: {
-    backgroundColor: colors.primary,
-  },
-  lockedBubble: {
-    backgroundColor: colors.surfaceMuted,
   },
   bubbleLabel: {
     color: colors.text,
@@ -301,11 +441,6 @@ const styles = StyleSheet.create({
   },
   completedLabel: {
     color: colors.success,
-  },
-  currentLabel: {
-    color: colors.textInverse,
-    fontSize: fontSize.lg,
-    lineHeight: 23,
   },
   notFound: {
     flex: 1,

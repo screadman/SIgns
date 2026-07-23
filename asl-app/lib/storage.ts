@@ -265,7 +265,7 @@ export async function getUnlockedBadges(): Promise<BadgeId[]> {
 }
 
 function isModuleFullyComplete(
-  moduleId: 'alphabet' | 'numbers',
+  moduleId: 'alphabet' | 'numbers' | 'conversation' | 'wh-questions',
   completedLessonIds: string[],
 ): boolean {
   const module = getLearningModule(moduleId);

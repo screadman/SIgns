@@ -78,13 +78,15 @@ function AnswerButton({
         >
           {lesson.sign.label}
         </Text>
-      ) : (
+      ) : typeof lesson.sign.image === 'number' ? (
         <Image
           source={lesson.sign.image}
           style={styles.answerImage}
           resizeMode="contain"
           accessibilityIgnoresInvertColors
         />
+      ) : (
+        <Text style={styles.answerLabel}>{lesson.sign.label}</Text>
       )}
 
       {state !== 'default' && (
@@ -225,7 +227,8 @@ export default function QuizScreen() {
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          {currentQuestion.format === 'image-to-label' ? (
+          {currentQuestion.format === 'image-to-label' &&
+          typeof currentQuestion.prompt.sign.image === 'number' ? (
             <View style={styles.promptImageContainer}>
               <Image
                 source={currentQuestion.prompt.sign.image}
@@ -247,7 +250,9 @@ export default function QuizScreen() {
               ? `What ${
                   currentQuestion.prompt.moduleId === 'alphabet'
                     ? 'letter'
-                    : 'number'
+                    : currentQuestion.prompt.moduleId === 'numbers'
+                      ? 'number'
+                      : 'sign'
                 } is this sign?`
               : `Which sign matches ${currentQuestion.prompt.sign.label}?`}
           </Text>

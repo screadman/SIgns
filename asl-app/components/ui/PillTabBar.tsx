@@ -3,6 +3,7 @@ import { type Href, usePathname, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { MAIN_TABS } from '../../constants/navigation';
 import {
   borderRadius,
   colors,
@@ -40,40 +41,26 @@ type TabsPillTabBarProps = {
   };
 };
 
-const TABS: TabItem[] = [
-  {
-    key: 'home',
-    label: 'Home',
-    href: '/(tabs)/home',
-    icon: 'home-outline',
-    activeIcon: 'home',
-  },
-  {
-    key: 'learn',
-    label: 'Learn',
-    href: '/(tabs)/learn',
-    icon: 'book-outline',
-    activeIcon: 'book',
-  },
-  {
-    key: 'profile',
-    label: 'Profile',
-    href: '/(tabs)/profile',
-    icon: 'person-outline',
-    activeIcon: 'person',
-  },
-];
+const TABS: TabItem[] = MAIN_TABS.map((tab) => ({
+  key: tab.id,
+  label: tab.label,
+  href: tab.href,
+  icon: tab.icon,
+  activeIcon: tab.activeIcon,
+}));
 
 export const PILL_TAB_BAR_HEIGHT = 52;
 export const PILL_TAB_BAR_GAP = spacing.sm;
 
-
 function resolveActiveKey(pathname: string) {
+  if (pathname.includes('practice') || pathname.includes('quiz')) {
+    return 'practice';
+  }
+
   if (
     pathname.includes('learn') ||
     pathname.includes('module') ||
-    pathname.includes('lesson') ||
-    pathname.includes('quiz')
+    pathname.includes('lesson')
   ) {
     return 'learn';
   }
@@ -200,9 +187,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minWidth: 220,
-    maxWidth: 280,
-    width: '72%',
+    minWidth: 260,
+    maxWidth: 320,
+    width: '84%',
     height: PILL_TAB_BAR_HEIGHT,
     paddingHorizontal: spacing.sm,
     borderRadius: borderRadius.full,

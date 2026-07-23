@@ -1,7 +1,8 @@
 export type AslGlyph = {
   id: string;
   label: string;
-  image: number;
+  /** Local PNG/require asset. Optional until video/GIF media is ready. */
+  image?: number;
   description: string;
   tip: string;
 };

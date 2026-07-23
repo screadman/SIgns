@@ -70,7 +70,7 @@ export default function LearnScreen() {
               <Text style={styles.title}>SIGNS</Text>
             </View>
 
-            <View style={styles.moduleList}>
+            <View style={styles.moduleGrid}>
               {LEARNING_MODULES.map((module) => {
                 const completedLessons = module.lessons.filter((lesson) =>
                   completedLessonIds.includes(lesson.id),
@@ -127,8 +127,12 @@ const styles = StyleSheet.create({
     fontSize: fontSize['2xl'],
     lineHeight: lineHeight['2xl'],
   },
-  moduleList: {
-    gap: spacing.md,
-    padding: spacing.lg,
+  moduleGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: spacing['2sm'],
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
   },
 });
