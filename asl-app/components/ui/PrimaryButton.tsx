@@ -20,12 +20,14 @@ type PrimaryButtonProps = Omit<PressableProps, 'children' | 'style'> & {
   title: string;
   loading?: boolean;
   fullWidth?: boolean;
+  compact?: boolean;
 };
 
 export function PrimaryButton({
   title,
   loading = false,
   fullWidth = false,
+  compact = false,
   disabled,
   ...pressableProps
 }: PrimaryButtonProps) {
@@ -47,7 +49,9 @@ export function PrimaryButton({
       {loading ? (
         <ActivityIndicator color={colors.textInverse} />
       ) : (
-        <Text style={styles.label}>{title}</Text>
+        <Text style={[styles.label, compact && styles.labelCompact]}>
+          {title}
+        </Text>
       )}
     </Pressable>
   );

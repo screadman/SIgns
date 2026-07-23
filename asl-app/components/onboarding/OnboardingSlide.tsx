@@ -32,7 +32,7 @@ type OnboardingSlideProps = {
   height: number;
   active: boolean;
   animateBadge?: boolean;
-  footer: ReactNode;
+  footer?: ReactNode;
 };
 
 export function OnboardingSlide({
@@ -51,7 +51,7 @@ export function OnboardingSlide({
   const badgeProgress = useRef(
     new Animated.Value(animateBadge ? 0 : 1),
   ).current;
-  const illustrationSize = Math.min(310, width - spacing['2xl'] - spacing.xl);
+  const illustrationSize = Math.min(240, Math.max(180, width - spacing['3xl']));
 
   useEffect(() => {
     if (!active) {
@@ -154,23 +154,24 @@ export function OnboardingSlide({
         </View>
       </View>
 
-      <View style={styles.footer}>{footer}</View>
+      {footer ? <View style={styles.footer}>{footer}</View> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    height: '100%',
-    justifyContent: 'space-between',
+    overflow: 'hidden',
+    justifyContent: 'center',
     backgroundColor: colors.background,
   },
   content: {
     alignItems: 'center',
-    paddingTop: spacing.lg,
+    justifyContent: 'center',
+    paddingTop: spacing.md,
     paddingHorizontal: spacing.lg,
-    gap: spacing.xl,
+    paddingBottom: spacing.md,
+    gap: spacing.lg,
   },
   badge: {
     minHeight: 30,

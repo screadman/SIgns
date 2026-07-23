@@ -44,11 +44,11 @@ function Dot({ active }: { active: boolean }) {
         {
           width: progress.interpolate({
             inputRange: [0, 1],
-            outputRange: [8, 24],
+            outputRange: [10, 28],
           }),
           backgroundColor: progress.interpolate({
             inputRange: [0, 1],
-            outputRange: [colors.disabled, colors.primary],
+            outputRange: [colors.textMuted, colors.primary],
           }),
         },
       ]}
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   dot: {
-    height: 8,
+    height: 10,
     borderRadius: borderRadius.full,
   },
 });

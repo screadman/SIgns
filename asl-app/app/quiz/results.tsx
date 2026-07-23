@@ -13,7 +13,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LearningBottomNav, PrimaryButton } from '../../components/ui';
-import { getLesson } from '../../constants/learning';
 import {
   borderRadius,
   borderWidth,
@@ -24,6 +23,7 @@ import {
   opacity,
   spacing,
 } from '../../constants/theme';
+import { getNextLesson, checkAndUnlockBadges, saveQuizResult } from '../../lib/storage';
 
 const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
@@ -48,18 +48,40 @@ export default function QuizResultsScreen() {
     total?: string | string[];
     xp?: string | string[];
     stars?: string | string[];
+    resultId?: string | string[];
   }>();
   const lessonId = getParam(params.lessonId);
   const score = Math.max(0, getNumberParam(params.score, 0));
   const total = Math.max(1, getNumberParam(params.total, 3));
   const xp = Math.max(0, getNumberParam(params.xp, score * 10));
   const earnedStars = Math.min(3, Math.max(1, getNumberParam(params.stars, 1)));
-  const lessonData = getLesson(lessonId);
+  const resultId = getParam(params.resultId);
   const starScales = useRef([
     new Animated.Value(0),
     new Animated.Value(0),
     new Animated.Value(0),
   ]).current;
+  const hasSavedResult = useRef(false);
+  const savePromiseRef = useRef<Promise<unknown> | null>(null);
+
+  useEffect(() => {
+    if (!lessonId || hasSavedResult.current) {
+      return;
+    }
+
+    hasSavedResult.current = true;
+    savePromiseRef.current = saveQuizResult({
+      lessonId,
+      score,
+      total,
+      xp,
+      stars: earnedStars,
+      resultId: resultId || undefined,
+    }).then(async (snapshot) => {
+      await checkAndUnlockBadges({ score, total });
+      return snapshot;
+    });
+  }, [earnedStars, lessonId, resultId, score, total, xp]);
 
   useEffect(() => {
     const animations = starScales.slice(0, earnedStars).map((scale, index) =>
@@ -77,13 +99,10 @@ export default function QuizResultsScreen() {
     Animated.parallel(animations).start();
   }, [earnedStars, starScales]);
 
-  function continueLearning() {
-    if (!lessonData) {
-      router.replace('/(tabs)/learn' as Href);
-      return;
-    }
+  async function continueLearning() {
+    await savePromiseRef.current;
 
-    const nextLesson = lessonData.module.lessons[lessonData.lessonIndex + 1];
+    const nextLesson = await getNextLesson();
 
     if (nextLesson) {
       router.replace(`/lesson/${nextLesson.id}` as Href);
@@ -161,7 +180,9 @@ export default function QuizResultsScreen() {
               }
             />
             <Pressable
-              onPress={continueLearning}
+              onPress={() => {
+                void continueLearning();
+              }}
               accessibilityRole="button"
               style={({ pressed }) => [
                 styles.continueButton,

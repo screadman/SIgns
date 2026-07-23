@@ -5,31 +5,112 @@ import {
   useLocalSearchParams,
   useRouter,
 } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LearningBottomNav } from '../../components/ui';
-import { getLearningModule } from '../../constants/learning';
+import {
+  getFirstPracticeLesson,
+  getLearningModule,
+  lessonHasQuizMedia,
+  type Lesson,
+} from '../../constants/learning';
 import {
   borderRadius,
+  borderWidth,
   colors,
   fontFamily,
   fontSize,
   opacity,
   spacing,
 } from '../../constants/theme';
-import { getCompletedLessons } from '../../lib/storage';
+import {
+  getLessonImageSource,
+  lessonHasSignImage,
+} from '../../lib/signImages';
+import {
+  getCompletedLessons,
+  getFavoriteLessons,
+  isFavoriteLesson,
+  toggleFavoriteLesson,
+} from '../../lib/storage';
 
 function getParam(value: string | string[] | undefined): string {
   return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
+}
+
+function SignGridCard({
+  lesson,
+  isCompleted,
+  isFavorite,
+  onPress,
+  onToggleFavorite,
+}: {
+  lesson: Lesson;
+  isCompleted: boolean;
+  isFavorite: boolean;
+  onPress: () => void;
+  onToggleFavorite: () => void;
+}) {
+  const imageSource = getLessonImageSource(lesson);
+  const hasImage = lessonHasSignImage(lesson);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${lesson.title}${isCompleted ? ', completed' : ''}${
+        isFavorite ? ', favorite' : ''
+      }`}
+      style={({ pressed }) => [styles.signCard, pressed && styles.pressed]}
+    >
+      <View style={styles.signMedia}>
+        {hasImage && imageSource ? (
+          <Image
+            source={imageSource}
+            style={styles.signImage}
+            resizeMode="contain"
+            fadeDuration={0}
+            accessibilityIgnoresInvertColors
+          />
+        ) : (
+          <Ionicons name="images-outline" size={28} color={colors.textMuted} />
+        )}
+        <Pressable
+          onPress={onToggleFavorite}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={
+            isFavorite ? 'Remove from favorites' : 'Add to favorites'
+          }
+          style={styles.heartButton}
+        >
+          <Ionicons
+            name={isFavorite ? 'heart' : 'heart-outline'}
+            size={18}
+            color={isFavorite ? colors.error : colors.textMuted}
+          />
+        </Pressable>
+        {isCompleted ? (
+          <View style={styles.completedBadge}>
+            <Ionicons name="checkmark" size={12} color={colors.white} />
+          </View>
+        ) : null}
+      </View>
+      <Text style={styles.signLabel} numberOfLines={1}>
+        {lesson.sign.label}
+      </Text>
+    </Pressable>
+  );
 }
 
 export default function ModuleScreen() {
@@ -37,28 +118,28 @@ export default function ModuleScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const module = getLearningModule(getParam(params.id));
   const [completedLessonIds, setCompletedLessonIds] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [favoriteLessonIds, setFavoriteLessonIds] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
 
       async function loadProgress() {
-        setIsLoading(true);
-
         try {
-          const completedLessons = await getCompletedLessons();
+          const [completedLessons, favorites] = await Promise.all([
+            getCompletedLessons(),
+            getFavoriteLessons(),
+          ]);
 
           if (isActive) {
             setCompletedLessonIds(completedLessons);
+            setFavoriteLessonIds(favorites);
           }
         } catch {
           if (isActive) {
             setCompletedLessonIds([]);
-          }
-        } finally {
-          if (isActive) {
-            setIsLoading(false);
+            setFavoriteLessonIds([]);
           }
         }
       }
@@ -70,6 +151,32 @@ export default function ModuleScreen() {
       };
     }, []),
   );
+
+  const filteredLessons = useMemo(() => {
+    if (!module) {
+      return [];
+    }
+
+    const query = searchQuery.trim().toLowerCase();
+
+    if (!query) {
+      return module.lessons;
+    }
+
+    return module.lessons.filter((lesson) => {
+      const label = lesson.sign.label.toLowerCase();
+      const title = lesson.title.toLowerCase();
+      const id = lesson.sign.id.toLowerCase();
+
+      return (
+        label.includes(query) ||
+        title.includes(query) ||
+        id.includes(query) ||
+        label.startsWith(query) ||
+        id.startsWith(query)
+      );
+    });
+  }, [module, searchQuery]);
 
   if (!module) {
     return (
@@ -87,16 +194,14 @@ export default function ModuleScreen() {
   const completedCount = module.lessons.filter((lesson) =>
     completedLessonIds.includes(lesson.id),
   ).length;
-  const currentLessonIndex = module.lessons.findIndex(
-    (lesson) => !completedLessonIds.includes(lesson.id),
-  );
-  const alphabetModule = getLearningModule('alphabet');
-  const isModuleLocked =
-    module.id === 'numbers' &&
-    alphabetModule !== undefined &&
-    !alphabetModule.lessons.every((lesson) =>
-      completedLessonIds.includes(lesson.id),
-    );
+  const practiceLesson = getFirstPracticeLesson(module);
+  const canPractice =
+    practiceLesson !== null && lessonHasQuizMedia(practiceLesson);
+
+  async function handleToggleFavorite(lessonId: string) {
+    const updated = await toggleFavoriteLesson(lessonId);
+    setFavoriteLessonIds(updated);
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -104,9 +209,22 @@ export default function ModuleScreen() {
         <View style={styles.header}>
           <View style={styles.headerTitleGroup}>
             <Pressable
-              onPress={() => router.back()}
+              onPress={() => {
+                if (router.canDismiss()) {
+                  router.dismiss();
+                  return;
+                }
+
+                if (router.canGoBack()) {
+                  router.back();
+                  return;
+                }
+
+                router.replace('/(tabs)/learn' as Href);
+              }}
               accessibilityRole="button"
               accessibilityLabel="Go back"
+              hitSlop={12}
               style={({ pressed }) => [
                 styles.backButton,
                 pressed && styles.pressed,
@@ -128,80 +246,90 @@ export default function ModuleScreen() {
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
-          {isLoading ? (
-            <ActivityIndicator
-              style={styles.loader}
-              size="large"
-              color={colors.primary}
-            />
-          ) : (
-            <View style={styles.grid}>
-              {module.lessons.map((lesson, index) => {
-                const isCompleted = completedLessonIds.includes(lesson.id);
-                const isCurrent =
-                  !isModuleLocked &&
-                  (currentLessonIndex === index ||
-                    (currentLessonIndex === -1 &&
-                      index === module.lessons.length - 1));
-                const isLocked =
-                  isModuleLocked || (!isCompleted && !isCurrent);
+          <Pressable
+            disabled={!canPractice}
+            onPress={() => {
+              if (!practiceLesson || !canPractice) {
+                return;
+              }
 
-                return (
-                  <Pressable
-                    key={lesson.id}
-                    disabled={isLocked}
-                    onPress={() =>
-                      router.push(`/lesson/${lesson.id}` as Href)
-                    }
-                    accessibilityRole="button"
-                    accessibilityState={{ disabled: isLocked }}
-                    accessibilityLabel={`${lesson.title}, ${
-                      isCompleted
-                        ? 'completed'
-                        : isCurrent
-                          ? 'available'
-                          : 'locked'
-                    }`}
-                    style={({ pressed }) => [
-                      styles.bubble,
-                      isCompleted && styles.completedBubble,
-                      isCurrent && !isCompleted && styles.currentBubble,
-                      isLocked && styles.lockedBubble,
-                      pressed && !isLocked && styles.pressed,
-                    ]}
-                  >
-                    {isLocked ? (
-                      <Ionicons
-                        name="lock-closed-outline"
-                        size={14}
-                        color={colors.textMuted}
-                      />
-                    ) : (
-                      <>
-                        <Text
-                          style={[
-                            styles.bubbleLabel,
-                            isCompleted && styles.completedLabel,
-                            isCurrent && !isCompleted && styles.currentLabel,
-                          ]}
-                        >
-                          {lesson.sign.label}
-                        </Text>
-                        {isCompleted && (
-                          <Ionicons
-                            name="checkmark"
-                            size={10}
-                            color={colors.success}
-                          />
-                        )}
-                      </>
-                    )}
-                  </Pressable>
-                );
-              })}
+              router.push(`/quiz/${practiceLesson.id}` as Href);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Start optional practice"
+            accessibilityState={{ disabled: !canPractice }}
+            style={({ pressed }) => [
+              styles.practiceCard,
+              !canPractice && styles.practiceCardDisabled,
+              pressed && canPractice && styles.pressed,
+            ]}
+          >
+            <View style={styles.practiceCopy}>
+              <Text
+                style={[
+                  styles.practiceEyebrow,
+                  !canPractice && styles.practiceTextDisabled,
+                ]}
+              >
+                Let&apos;s put it into practice
+              </Text>
+              <Text
+                style={[
+                  styles.practiceTitle,
+                  !canPractice && styles.practiceTextDisabled,
+                ]}
+              >
+                {canPractice ? 'Ready, set, go' : 'Practice coming soon'}
+              </Text>
             </View>
-          )}
+            <View style={styles.practiceIconWrap}>
+              <Ionicons
+                name="extension-puzzle"
+                size={28}
+                color={canPractice ? colors.white : colors.textMuted}
+              />
+            </View>
+          </Pressable>
+
+          <View style={styles.searchBar}>
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search signs..."
+              placeholderTextColor={colors.textMuted}
+              style={styles.searchInput}
+              accessibilityLabel={`Search in ${module.title}`}
+              returnKeyType="search"
+              autoCorrect={false}
+              autoCapitalize="none"
+              clearButtonMode="while-editing"
+            />
+            <Ionicons name="search" size={20} color={colors.textMuted} />
+          </View>
+
+          <Text style={styles.sectionTitle}>Signs in collection</Text>
+
+          <View style={styles.signGrid}>
+            {filteredLessons.map((lesson) => (
+              <SignGridCard
+                key={lesson.id}
+                lesson={lesson}
+                isCompleted={completedLessonIds.includes(lesson.id)}
+                isFavorite={isFavoriteLesson(lesson.id, favoriteLessonIds)}
+                onPress={() => router.push(`/lesson/${lesson.id}` as Href)}
+                onToggleFavorite={() => {
+                  void handleToggleFavorite(lesson.id);
+                }}
+              />
+            ))}
+          </View>
+
+          {filteredLessons.length === 0 ? (
+            <Text style={styles.emptyText}>No signs match your search.</Text>
+          ) : null}
         </ScrollView>
       </View>
       <LearningBottomNav />
@@ -229,6 +357,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing['2sm'],
+    flexShrink: 1,
   },
   backButton: {
     width: 36,
@@ -246,6 +375,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.headingExtraBold,
     fontSize: fontSize['2xl'],
     lineHeight: 30,
+    flexShrink: 1,
   },
   progressBadge: {
     paddingHorizontal: spacing['2sm'],
@@ -264,48 +394,138 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingBottom: spacing['2xl'],
   },
-  loader: {
-    marginTop: spacing.xl,
-  },
-  grid: {
-    width: 288,
-    alignSelf: 'center',
+  practiceCard: {
+    minHeight: 88,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing['2sm'],
-    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.md,
+    borderRadius: borderRadius.xl,
+    backgroundColor: colors.accent,
   },
-  bubble: {
-    width: 48,
-    height: 48,
+  practiceCardDisabled: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  practiceCopy: {
+    flex: 1,
+    marginRight: spacing.md,
+    gap: 4,
+  },
+  practiceEyebrow: {
+    color: colors.white,
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.sm,
+    lineHeight: 18,
+  },
+  practiceTitle: {
+    color: colors.white,
+    fontFamily: fontFamily.headingExtraBold,
+    fontSize: fontSize.xl,
+    lineHeight: 26,
+  },
+  practiceTextDisabled: {
+    color: colors.textMuted,
+  },
+  practiceIconWrap: {
+    width: 52,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: borderRadius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
   },
-  completedBubble: {
-    backgroundColor: colors.successSurface,
+  searchBar: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.full,
+    borderWidth: borderWidth.thin,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceElevated,
   },
-  currentBubble: {
-    backgroundColor: colors.primary,
+  searchInput: {
+    flex: 1,
+    color: colors.text,
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.base,
+    paddingVertical: spacing.sm,
   },
-  lockedBubble: {
-    backgroundColor: colors.surfaceMuted,
+  sectionTitle: {
+    marginBottom: spacing['2sm'],
+    color: colors.textMuted,
+    fontFamily: fontFamily.bodySemibold,
+    fontSize: fontSize.base,
+    lineHeight: 22,
   },
-  bubbleLabel: {
+  signGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: spacing['2sm'],
+  },
+  signCard: {
+    width: '47.5%',
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: borderWidth.thin,
+    borderColor: colors.border,
+  },
+  signMedia: {
+    height: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.signSurface,
+  },
+  signImage: {
+    width: '80%',
+    height: '80%',
+  },
+  heartButton: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.white,
+  },
+  completedBadge: {
+    position: 'absolute',
+    left: spacing.sm,
+    bottom: spacing.sm,
+    width: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.success,
+  },
+  signLabel: {
+    width: '100%',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
     color: colors.text,
     fontFamily: fontFamily.headingExtraBold,
     fontSize: fontSize.sm,
     lineHeight: 18,
+    textAlign: 'center',
   },
-  completedLabel: {
-    color: colors.success,
-  },
-  currentLabel: {
-    color: colors.textInverse,
-    fontSize: fontSize.lg,
-    lineHeight: 23,
+  emptyText: {
+    marginTop: spacing.md,
+    color: colors.textMuted,
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.base,
+    textAlign: 'center',
   },
   notFound: {
     flex: 1,

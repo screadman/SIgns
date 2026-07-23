@@ -4,14 +4,13 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { LearningModule } from '../../constants/learning';
 import {
   borderRadius,
-  borderWidth,
   colors,
   fontFamily,
   fontSize,
   opacity,
+  shadows,
   spacing,
 } from '../../constants/theme';
-import { ProgressBar } from './ProgressBar';
 
 type ModuleCardProps = {
   module: LearningModule;
@@ -20,6 +19,30 @@ type ModuleCardProps = {
   onPress: () => void;
 };
 
+function ModuleGlyph({
+  module,
+  locked,
+}: {
+  module: LearningModule;
+  locked: boolean;
+}) {
+  const color = locked ? colors.textMuted : colors.white;
+
+  if (module.id === 'alphabet') {
+    return <Text style={[styles.glyphText, { color }]}>ABC</Text>;
+  }
+
+  if (module.id === 'wh-questions') {
+    return <Text style={[styles.glyphMark, { color }]}>?</Text>;
+  }
+
+  if (module.id === 'numbers') {
+    return <Text style={[styles.glyphText, { color }]}>123</Text>;
+  }
+
+  return <Ionicons name={module.icon} size={34} color={color} />;
+}
+
 export function ModuleCard({
   module,
   completedLessons,
@@ -27,122 +50,96 @@ export function ModuleCard({
   onPress,
 }: ModuleCardProps) {
   const totalLessons = module.lessons.length;
-  const progress = totalLessons === 0 ? 0 : completedLessons / totalLessons;
-  const progressPercentage = Math.round(progress * 100);
-  const lessonUnit = module.id === 'alphabet' ? 'letters' : 'numbers';
-  const progressLabel = `${completedLessons} of ${totalLessons} ${lessonUnit} completed`;
+  const progressPercentage =
+    totalLessons === 0 ? 0 : Math.round((completedLessons / totalLessons) * 100);
 
   return (
     <Pressable
       onPress={onPress}
+      disabled={locked}
       accessibilityRole="button"
+      accessibilityState={{ disabled: locked }}
       accessibilityLabel={
         locked
-          ? `${module.title}, lessons locked. Complete the alphabet first`
+          ? `${module.title}, locked`
           : `${module.title}, ${progressPercentage}% complete`
       }
       style={({ pressed }) => [
         styles.card,
-        locked && styles.lockedCard,
-        pressed && styles.pressed,
+        {
+          backgroundColor: locked ? colors.surfaceMuted : module.tileColor,
+        },
+        pressed && !locked && styles.pressed,
       ]}
     >
-      <View style={styles.header}>
-        <View
-          style={[
-            styles.iconContainer,
-            {
-              backgroundColor: locked
-                ? colors.surfaceMuted
-                : module.surfaceColor,
-            },
-          ]}
-        >
-          <Ionicons
-            name={module.icon}
-            size={24}
-            color={locked ? colors.textMuted : module.color}
-          />
-        </View>
-
-        <View style={styles.heading}>
-          <Text style={styles.title}>{module.title}</Text>
-          <Text style={styles.lessonCount}>
-            {locked ? 'Complete the alphabet first' : progressLabel}
-          </Text>
-        </View>
-
-        {locked && (
-          <View style={styles.lockIcon}>
-            <Ionicons name="lock-closed-outline" size={16} color={colors.textMuted} />
+      <View style={styles.glyphWrap}>
+        {locked ? (
+          <View style={styles.lockBadge}>
+            <Ionicons name="lock-closed" size={16} color={colors.white} />
           </View>
+        ) : (
+          <ModuleGlyph module={module} locked={locked} />
         )}
       </View>
 
-      <ProgressBar
-        progress={progress}
-        color={locked ? colors.textMuted : module.color}
-        trackColor={colors.surfaceMuted}
-        style={styles.progressBar}
-      />
+      <View style={styles.labelPill}>
+        <Text style={styles.labelText} numberOfLines={1}>
+          {module.title}
+        </Text>
+      </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    width: '100%',
-    padding: spacing['2md'],
+    width: '45%',
+    aspectRatio: 1.55,
     borderRadius: borderRadius.xl,
-    backgroundColor: colors.surfaceElevated,
-    borderWidth: borderWidth.thick,
-    borderColor: colors.primarySurface,
-    gap: spacing.md,
-  },
-  lockedCard: {
-    borderColor: colors.surfaceMuted,
-    opacity: opacity.muted,
+    padding: spacing.sm,
+    justifyContent: 'space-between',
+    ...shadows.md,
   },
   pressed: {
     opacity: opacity.pressed,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
+  glyphWrap: {
+    alignSelf: 'flex-end',
+    minHeight: 38,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: borderRadius.lg,
   },
-  heading: {
-    flex: 1,
-    marginHorizontal: spacing['2sm'],
-  },
-  title: {
-    color: colors.text,
+  glyphText: {
     fontFamily: fontFamily.headingExtraBold,
-    fontSize: fontSize.lg,
-    lineHeight: 23,
+    fontSize: 26,
+    lineHeight: 30,
+    letterSpacing: -0.6,
   },
-  lessonCount: {
-    marginTop: 2,
-    color: colors.textMuted,
-    fontFamily: fontFamily.body,
-    fontSize: fontSize.sm,
-    lineHeight: 17,
+  glyphMark: {
+    fontFamily: fontFamily.headingExtraBold,
+    fontSize: 40,
+    lineHeight: 44,
   },
-  lockIcon: {
+  lockBadge: {
     width: 32,
     height: 32,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: borderRadius.full,
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: colors.accent,
   },
-  progressBar: {
-    height: 10,
+  labelPill: {
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.white,
+  },
+  labelText: {
+    color: colors.text,
+    fontFamily: fontFamily.bodySemibold,
+    fontSize: fontSize.xs,
+    lineHeight: 16,
   },
 });

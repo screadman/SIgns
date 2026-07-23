@@ -12,8 +12,15 @@ import {
 } from '@expo-google-fonts/outfit';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+<<<<<<< HEAD
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+=======
+import { useEffect } from 'react';
+
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
+>>>>>>> fb6ebbe7c0d684919b5ae1be59f4e80780249110
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -23,6 +30,12 @@ export default function RootLayout() {
     Outfit_700Bold,
     Outfit_800ExtraBold,
   });
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      void SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
 
   if (!fontsLoaded && !fontError) {
     return null;
@@ -42,6 +55,10 @@ export default function RootLayout() {
         />
         <Stack.Screen
           name="lesson/[id]"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="practice-mode/[mode]"
           options={{ animation: 'slide_from_right' }}
         />
         <Stack.Screen

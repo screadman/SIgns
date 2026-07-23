@@ -1,40 +1,32 @@
-# Sources images ASL
+# Sources media ASL
 
-## Format
-
-Images PNG locales.
+App media is illustrations / stills only (no video).
 
 ## Alphabet A-Z
 
 | Element | Detail |
 |---------|--------|
-| Origine | Wikimedia Commons |
-| Fichiers | `Sign_language_A.svg` ... `Sign_language_Z.svg` |
-| Auteur d origine | wpclipart.com |
-| Licence | Domaine public |
-| Catalogue | https://commons.wikimedia.org/wiki/Category:ASL_letters |
-| Stockage | `asl-app/assets/asl/letters/` |
-| Rendu | PNG ~960 px de large a partir des SVG Wikimedia |
+| Stills PNG | Wikimedia Commons (domaine public), `assets/asl/letters/*.png` |
 
-## Chiffres 0-9
+## Numbers 0-9
 
 | Element | Detail |
 |---------|--------|
 | Origine | Wikimedia Commons |
-| Fichier source | `Asl_alphabet_gallaudet.png` (planche alphabet + chiffres) |
-| Auteur | Ds13 (Wikipedia / Commons) |
 | Licence | Domaine public |
-| Page | https://commons.wikimedia.org/wiki/File:Asl_alphabet_gallaudet.png |
-| Stockage | `asl-app/assets/asl/numbers/` |
-| Note | Decoupages individuels de la rangee 0-9 de la planche |
+| Stockage | `assets/asl/numbers/` |
 
-Les lettres wpclipart et la planche Gallaudet partagent la meme base typographique
-(Gallaudet), avec un rendu legerement different (silhouettes vs croquis).
+## Dictionary categories
+
+Core packs with real stills: Alphabet, Numbers.
+Other packs (Conversation, Questions, Emotions, Animals, Food, Body parts, Work, Internet, School, Sports): gloss + tip text only for now. Lessons show "Illustration coming soon".
+
+Favorites are stored locally (`favorite_lesson_ids` in AsyncStorage).
 
 ## Mapping
 
-`asl-app/constants/aslLetters.ts` : `ASL_LETTERS` (A-Z) et `ASL_NUMBERS` (0-9).
-
-## Usage dans SIgns
-
-Domaine public : utilisable dans l application educative.
+- Alphabet / Numbers: `asl-app/constants/aslLetters.ts`
+- Conversation: `asl-app/constants/conversation.ts`
+- Questions: `asl-app/constants/whQuestions.ts`
+- Extra categories: `asl-app/constants/dictionaryCategories.ts`
+- Modules: `asl-app/constants/learning.ts`

@@ -29,7 +29,10 @@ import {
   getQuizXp,
   type QuizFormat,
 } from '../../lib/quiz';
-import { addStars, saveCompletedLesson } from '../../lib/storage';
+import {
+  getLessonImageSource,
+  lessonHasSignImage,
+} from '../../lib/signImages';
 
 const ALL_LESSONS = LEARNING_MODULES.flatMap((module) => module.lessons);
 
@@ -52,6 +55,8 @@ function AnswerButton({
   disabled: boolean;
   onPress: () => void;
 }) {
+  const imageSource = getLessonImageSource(lesson);
+
   return (
     <Pressable
       onPress={onPress}
@@ -79,13 +84,15 @@ function AnswerButton({
         >
           {lesson.sign.label}
         </Text>
-      ) : (
+      ) : imageSource ? (
         <Image
-          source={lesson.sign.image}
+          source={imageSource}
           style={styles.answerImage}
           resizeMode="contain"
           accessibilityIgnoresInvertColors
         />
+      ) : (
+        <Text style={styles.answerLabel}>{lesson.sign.label}</Text>
       )}
 
       {state !== 'default' && (
@@ -139,22 +146,19 @@ export default function QuizScreen() {
     setIsFinishing(true);
     const earnedStars = getQuizStars(finalScore, questions.length);
     const earnedXp = getQuizXp(finalScore, questions.length);
+    const resultId = `${lessonId}-${Date.now()}`;
 
-    void Promise.all([
-      saveCompletedLesson(lessonId),
-      addStars(earnedStars),
-    ]).finally(() => {
-      router.replace({
-        pathname: '/quiz/results',
-        params: {
-          lessonId,
-          score: String(finalScore),
-          total: String(questions.length),
-          xp: String(earnedXp),
-          stars: String(earnedStars),
-        },
-      } as Href);
-    });
+    router.replace({
+      pathname: '/quiz/results',
+      params: {
+        lessonId,
+        score: String(finalScore),
+        total: String(questions.length),
+        xp: String(earnedXp),
+        stars: String(earnedStars),
+        resultId,
+      },
+    } as Href);
   }
 
   function handleAnswer(answerId: string) {
@@ -229,10 +233,12 @@ export default function QuizScreen() {
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          {currentQuestion.format === 'image-to-label' ? (
+          {currentQuestion.format === 'image-to-label' &&
+          lessonHasSignImage(currentQuestion.prompt) &&
+          getLessonImageSource(currentQuestion.prompt) ? (
             <View style={styles.promptImageContainer}>
               <Image
-                source={currentQuestion.prompt.sign.image}
+                source={getLessonImageSource(currentQuestion.prompt)}
                 style={styles.promptImage}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors
@@ -251,7 +257,9 @@ export default function QuizScreen() {
               ? `What ${
                   currentQuestion.prompt.moduleId === 'alphabet'
                     ? 'letter'
-                    : 'number'
+                    : currentQuestion.prompt.moduleId === 'numbers'
+                      ? 'number'
+                      : 'sign'
                 } is this sign?`
               : `Which sign matches ${currentQuestion.prompt.sign.label}?`}
           </Text>

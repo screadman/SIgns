@@ -1,6 +1,8 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
-import type { AslGlyph } from '../../constants/aslLetters';
+import { hasMediaAsset, toImageSource, type AslGlyph } from '../../constants/aslLetters';
+import type { LearningModuleId } from '../../constants/learning';
 import {
   borderRadius,
   borderWidth,
@@ -11,18 +13,25 @@ import {
   shadows,
   spacing,
 } from '../../constants/theme';
+import { peekSignImage } from '../../lib/signImages';
 
 type SignCardProps = {
   sign: AslGlyph;
+  moduleId?: LearningModuleId;
   accessibilityPrefix?: string;
   featured?: boolean;
 };
 
 export function SignCard({
   sign,
+  moduleId,
   accessibilityPrefix = 'ASL sign for',
   featured = false,
 }: SignCardProps) {
+  const imageSource =
+    toImageSource(sign.image) ?? peekSignImage(moduleId, sign.id);
+  const hasImage = hasMediaAsset(imageSource);
+
   return (
     <View
       style={[styles.card, featured && styles.featuredCard]}
@@ -32,12 +41,25 @@ export function SignCard({
       <View
         style={[styles.imageContainer, featured && styles.featuredImageContainer]}
       >
-        <Image
-          source={sign.image}
-          style={[styles.image, featured && styles.featuredImage]}
-          resizeMode="contain"
-          accessibilityIgnoresInvertColors
-        />
+        {hasImage ? (
+          <Image
+            source={imageSource}
+            style={[styles.image, featured && styles.featuredImage]}
+            resizeMode="contain"
+            accessibilityIgnoresInvertColors
+          />
+        ) : (
+          <View style={styles.mediaPlaceholder}>
+            <Ionicons
+              name="images-outline"
+              size={featured ? 40 : 28}
+              color={colors.textMuted}
+            />
+            <Text style={styles.mediaPlaceholderText}>
+              Illustration coming soon
+            </Text>
+          </View>
+        )}
       </View>
 
       <Text style={[styles.label, featured && styles.featuredLabel]}>
@@ -46,6 +68,9 @@ export function SignCard({
       <Text style={[styles.description, featured && styles.featuredDescription]}>
         {sign.description}
       </Text>
+      {featured && sign.tip ? (
+        <Text style={styles.tip}>{sign.tip}</Text>
+      ) : null}
     </View>
   );
 }
@@ -82,7 +107,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primarySurface,
   },
   featuredImageContainer: {
-    height: 260,
+    height: 200,
     borderRadius: borderRadius.xl,
     backgroundColor: colors.signSurface,
   },
@@ -91,8 +116,21 @@ const styles = StyleSheet.create({
     height: 116,
   },
   featuredImage: {
-    width: 220,
-    height: 220,
+    width: '100%',
+    height: '100%',
+  },
+  mediaPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  mediaPlaceholderText: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: fontSize.sm,
+    lineHeight: lineHeight.sm,
+    textAlign: 'center',
   },
   label: {
     color: colors.primary,
@@ -102,9 +140,10 @@ const styles = StyleSheet.create({
     marginTop: spacing['2sm'],
   },
   featuredLabel: {
-    fontSize: 64,
-    lineHeight: 81,
-    marginTop: spacing['2md'],
+    fontSize: 32,
+    lineHeight: 38,
+    marginTop: spacing.md,
+    textAlign: 'center',
   },
   description: {
     color: colors.textMuted,
@@ -120,6 +159,16 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 15,
     lineHeight: 22,
-    marginTop: spacing['2md'],
+    marginTop: spacing.sm,
+  },
+  tip: {
+    width: '100%',
+    maxWidth: 342,
+    marginTop: spacing.sm,
+    color: colors.textMuted,
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.sm,
+    lineHeight: lineHeight.sm,
+    textAlign: 'center',
   },
 });

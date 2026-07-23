@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import type { ComponentProps, ReactNode } from 'react';
+import type { ComponentProps } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -39,6 +39,7 @@ const WELCOME_ILLUSTRATION = require('../assets/onboarding/welcome.png');
 const START_ILLUSTRATION = require('../assets/onboarding/start.png');
 const SLIDES = ['welcome', 'features', 'start'] as const;
 const USE_NATIVE_DRIVER = Platform.OS !== 'web';
+const BOTTOM_CONTROLS_HEIGHT = 118;
 
 type SlideId = (typeof SLIDES)[number];
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
@@ -73,12 +74,12 @@ const FEATURES: Feature[] = [
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { width, height } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
+
+  const { width } = useWindowDimensions();
   const listRef = useRef<FlatList<SlideId>>(null);
   const screenOpacity = useRef(new Animated.Value(1)).current;
   const [activeIndex, setActiveIndex] = useState(0);
-  const pageHeight = height - insets.top - insets.bottom;
+  const [pageHeight, setPageHeight] = useState(0);
   const [isFinishing, setIsFinishing] = useState(false);
 
   const finishOnboarding = () => {
@@ -107,83 +108,106 @@ export default function OnboardingScreen() {
     setActiveIndex(Math.max(0, Math.min(nextIndex, SLIDES.length - 1)));
   };
 
-  const dots = (index: number) => (
-    <OnboardingDots total={SLIDES.length} activeIndex={index} />
-  );
+  const isLastSlide = activeIndex === SLIDES.length - 1;
+
+  const goToNextSlide = () => {
+    if (isLastSlide) {
+      finishOnboarding();
+      return;
+    }
+
+    const nextIndex = Math.min(activeIndex + 1, SLIDES.length - 1);
+    listRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+    setActiveIndex(nextIndex);
+  };
 
   return (
     <Animated.View style={[styles.screen, { opacity: screenOpacity }]}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <FlatList
-          ref={listRef}
-          style={styles.carousel}
-          contentContainerStyle={styles.carouselContent}
-          data={SLIDES}
-          extraData={activeIndex}
-          keyExtractor={(item) => item}
-          horizontal
-          pagingEnabled
-          bounces={false}
-          decelerationRate="fast"
-          scrollEnabled={activeIndex < SLIDES.length - 1}
-          showsHorizontalScrollIndicator={false}
-          scrollEventThrottle={16}
-          getItemLayout={(_, index) => ({
-            length: width,
-            offset: width * index,
-            index,
-          })}
-          onScroll={updateActiveIndex}
-          onMomentumScrollEnd={updateActiveIndex}
-          renderItem={({ item, index }) => {
-            if (item === 'welcome') {
-              return (
-                <OnboardingSlide
-                  badge="👋 SIGNS"
-                  title="Learn Sign Language"
-                  subtitle="Accessible, fun and progressive"
-                  illustration={WELCOME_ILLUSTRATION}
-                  width={width}
-                  height={pageHeight}
-                  active={activeIndex === index}
-                  footer={dots(0)}
-                />
-              );
-            }
+        <View
+          style={styles.carouselArea}
+          onLayout={(event) => {
+            const nextHeight = Math.floor(event.nativeEvent.layout.height);
 
-            if (item === 'features') {
-              return (
-                <FeaturesSlide
-                  width={width}
-                  height={pageHeight}
-                  active={activeIndex === index}
-                  footer={dots(1)}
-                />
-              );
+            if (nextHeight > 0 && nextHeight !== pageHeight) {
+              setPageHeight(nextHeight);
             }
-
-            return (
-              <OnboardingSlide
-                badge="🎉 LET'S GO"
-                badgeTone="accent"
-                animateBadge
-                title="Ready to Start?"
-                subtitle="No account required. Start learning now."
-                illustration={START_ILLUSTRATION}
-                width={width}
-                height={pageHeight}
-                active={activeIndex === index}
-                footer={
-                  <PrimaryButton
-                    title="Get Started"
-                    loading={isFinishing}
-                    onPress={finishOnboarding}
-                  />
-                }
-              />
-            );
           }}
-        />
+        >
+          {pageHeight > 0 ? (
+            <FlatList
+              ref={listRef}
+              style={styles.carousel}
+              data={SLIDES}
+              extraData={activeIndex}
+              keyExtractor={(item) => item}
+              horizontal
+              pagingEnabled
+              bounces
+              decelerationRate="fast"
+              scrollEnabled
+              showsHorizontalScrollIndicator={false}
+              scrollEventThrottle={16}
+              getItemLayout={(_, index) => ({
+                length: width,
+                offset: width * index,
+                index,
+              })}
+              onScroll={updateActiveIndex}
+              onMomentumScrollEnd={updateActiveIndex}
+              renderItem={({ item, index }) => {
+                if (item === 'welcome') {
+                  return (
+                    <OnboardingSlide
+                      badge="👋 SIGNS"
+                      title="Learn Sign Language"
+                      subtitle="Accessible, fun and progressive"
+                      illustration={WELCOME_ILLUSTRATION}
+                      width={width}
+                      height={pageHeight}
+                      active={activeIndex === index}
+                    />
+                  );
+                }
+
+                if (item === 'features') {
+                  return (
+                    <FeaturesSlide
+                      width={width}
+                      height={pageHeight}
+                      active={activeIndex === index}
+                    />
+                  );
+                }
+
+                return (
+                  <OnboardingSlide
+                    badge="🎉 LET'S GO"
+                    badgeTone="accent"
+                    animateBadge
+                    title="Ready to Start?"
+                    subtitle="No account required. Start learning now."
+                    illustration={START_ILLUSTRATION}
+                    width={width}
+                    height={pageHeight}
+                    active={activeIndex === index}
+                  />
+                );
+              }}
+            />
+          ) : null}
+        </View>
+
+        <View style={styles.bottomControls}>
+          <OnboardingDots total={SLIDES.length} activeIndex={activeIndex} />
+          <PrimaryButton
+            title={isLastSlide ? 'Get Started' : 'Next'}
+            fullWidth
+            compact
+            loading={isFinishing}
+            onPress={goToNextSlide}
+          />
+        </View>
       </SafeAreaView>
     </Animated.View>
   );
@@ -193,12 +217,10 @@ function FeaturesSlide({
   width,
   height,
   active,
-  footer,
 }: {
   width: number;
   height: number;
   active: boolean;
-  footer: ReactNode;
 }) {
   const animationValues = useRef(
     FEATURES.map(() => new Animated.Value(0)),
@@ -287,8 +309,6 @@ function FeaturesSlide({
           })}
         </View>
       </View>
-
-      <View style={styles.featuresFooter}>{footer}</View>
     </View>
   );
 }
@@ -302,16 +322,27 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  carouselArea: {
+    flex: 1,
+    overflow: 'hidden',
+  },
   carousel: {
     flex: 1,
   },
-  carouselContent: {
-    height: '100%',
+  bottomControls: {
+    height: BOTTOM_CONTROLS_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.background,
+    zIndex: 20,
+    elevation: 20,
   },
   featuresSlide: {
-    flex: 1,
-    height: '100%',
-    justifyContent: 'space-between',
+    overflow: 'hidden',
+    justifyContent: 'flex-start',
     backgroundColor: colors.background,
   },
   featuresContent: {
@@ -370,11 +401,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     lineHeight: lineHeight.xs,
   },
-  featuresFooter: {
-    minHeight: 66,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing['2sm'],
-  },
+
 });
+
