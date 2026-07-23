@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { ResizeMode, Video } from 'expo-av';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
@@ -13,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LearningBottomNav } from '../../components/ui';
+import { hasMediaAsset, toImageSource } from '../../constants/aslLetters';
 import { LEARNING_MODULES, type Lesson } from '../../constants/learning';
 import {
   borderRadius,
@@ -79,19 +79,9 @@ function AnswerButton({
         >
           {lesson.sign.label}
         </Text>
-      ) : typeof lesson.sign.video === 'number' ? (
-        <Video
-          source={lesson.sign.video}
-          style={styles.answerImage}
-          resizeMode={ResizeMode.CONTAIN}
-          shouldPlay
-          isLooping
-          isMuted
-          useNativeControls={false}
-        />
-      ) : typeof lesson.sign.image === 'number' ? (
+      ) : hasMediaAsset(lesson.sign.image) ? (
         <Image
-          source={lesson.sign.image}
+          source={toImageSource(lesson.sign.image)}
           style={styles.answerImage}
           resizeMode="contain"
           accessibilityIgnoresInvertColors
@@ -239,23 +229,10 @@ export default function QuizScreen() {
           showsVerticalScrollIndicator={false}
         >
           {currentQuestion.format === 'image-to-label' &&
-          typeof currentQuestion.prompt.sign.video === 'number' ? (
-            <View style={styles.promptImageContainer}>
-              <Video
-                source={currentQuestion.prompt.sign.video}
-                style={styles.promptImage}
-                resizeMode={ResizeMode.CONTAIN}
-                shouldPlay
-                isLooping
-                isMuted
-                useNativeControls={false}
-              />
-            </View>
-          ) : currentQuestion.format === 'image-to-label' &&
-            typeof currentQuestion.prompt.sign.image === 'number' ? (
+          hasMediaAsset(currentQuestion.prompt.sign.image) ? (
             <View style={styles.promptImageContainer}>
               <Image
-                source={currentQuestion.prompt.sign.image}
+                source={toImageSource(currentQuestion.prompt.sign.image)}
                 style={styles.promptImage}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors

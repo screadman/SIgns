@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PILL_TAB_BAR_HEIGHT } from '../../components/ui/PillTabBar';
-import { LEARNING_MODULES, lessonHasQuizMedia } from '../../constants/learning';
+import { PRACTICE_MODES, type PracticeMode } from '../../constants/practice';
 import {
   borderRadius,
   colors,
@@ -14,6 +14,33 @@ import {
   opacity,
   spacing,
 } from '../../constants/theme';
+
+function ModeTile({
+  mode,
+  onPress,
+}: {
+  mode: PracticeMode;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${mode.title}. ${mode.description}`}
+      style={({ pressed }) => [
+        styles.tile,
+        { backgroundColor: mode.tileColor },
+        pressed && styles.pressed,
+      ]}
+    >
+      <View style={styles.tileIconWrap}>
+        <Ionicons name={mode.icon} size={28} color={colors.white} />
+      </View>
+      <Text style={styles.tileTitle}>{mode.title}</Text>
+      <Text style={styles.tileDescription}>{mode.description}</Text>
+    </Pressable>
+  );
+}
 
 export default function PracticeScreen() {
   const router = useRouter();
@@ -27,47 +54,19 @@ export default function PracticeScreen() {
       >
         <Text style={styles.title}>Practice</Text>
         <Text style={styles.subtitle}>
-          Choose a collection when you want to quiz. Learning stays free to
-          browse.
+          Pick a mode. Learn stays free to browse; practice is optional.
         </Text>
 
-        <View style={styles.moduleList}>
-          {LEARNING_MODULES.map((module) => {
-            const hasQuizMedia = module.lessons.some((lesson) =>
-              lessonHasQuizMedia(lesson),
-            );
-
-            return (
-              <Pressable
-                key={module.id}
-                onPress={() => {
-                  router.push({
-                    pathname: '/module/[id]',
-                    params: { id: module.id },
-                  });
-                }}
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.card,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View style={styles.cardCopy}>
-                  <Text style={styles.cardTitle}>{module.title}</Text>
-                  <Text style={styles.cardSubtitle}>
-                    {hasQuizMedia
-                      ? 'Open the orange banner when you are ready'
-                      : 'Browse signs now. Quiz when videos are ready'}
-                  </Text>
-                </View>
-                <Ionicons
-                  name={hasQuizMedia ? 'flash' : 'chevron-forward'}
-                  size={18}
-                  color={hasQuizMedia ? colors.accent : colors.textMuted}
-                />
-              </Pressable>
-            );
-          })}
+        <View style={styles.grid}>
+          {PRACTICE_MODES.map((mode) => (
+            <ModeTile
+              key={mode.id}
+              mode={mode}
+              onPress={() => {
+                router.push(`/practice-mode/${mode.id}` as Href);
+              }}
+            />
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -86,7 +85,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: PILL_TAB_BAR_HEIGHT + spacing.xl,
-    gap: spacing.sm,
   },
   title: {
     color: colors.text,
@@ -99,41 +97,45 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.body,
     fontSize: fontSize.base,
     lineHeight: lineHeight.base,
-    marginBottom: spacing.md,
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
   },
-  moduleList: {
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     gap: spacing['2sm'],
   },
-  card: {
-    minHeight: 72,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+  tile: {
+    width: '48%',
+    minHeight: 168,
     borderRadius: borderRadius.xl,
-    backgroundColor: colors.surfaceElevated,
-    borderWidth: 2,
-    borderColor: colors.primarySurface,
+    padding: spacing.md,
+    justifyContent: 'flex-end',
+    gap: spacing.xs,
   },
-  pressed: {
-    opacity: opacity.pressed,
+  tileIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    marginBottom: 'auto',
   },
-  cardCopy: {
-    flex: 1,
-    marginRight: spacing.sm,
-    gap: 2,
-  },
-  cardTitle: {
-    color: colors.text,
+  tileTitle: {
+    color: colors.white,
     fontFamily: fontFamily.headingExtraBold,
     fontSize: fontSize.lg,
     lineHeight: 23,
   },
-  cardSubtitle: {
-    color: colors.textMuted,
+  tileDescription: {
+    color: 'rgba(255, 255, 255, 0.92)',
     fontFamily: fontFamily.body,
-    fontSize: fontSize.sm,
-    lineHeight: 18,
+    fontSize: fontSize.xs,
+    lineHeight: 16,
+  },
+  pressed: {
+    opacity: opacity.pressed,
   },
 });

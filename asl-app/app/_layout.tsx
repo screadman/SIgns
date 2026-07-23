@@ -54,6 +54,10 @@ export default function RootLayout() {
           options={{ animation: 'slide_from_right' }}
         />
         <Stack.Screen
+          name="practice-mode/[mode]"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
           name="quiz/[lessonId]"
           options={{ animation: 'slide_from_right' }}
         />

@@ -1,5 +1,5 @@
 /**
- * App navigation model: Learn discovers content, Practice trains with quizzes.
+ * App navigation model: Learn discovers content, Practice trains skills.
  */
 
 export type MainTabId = 'home' | 'learn' | 'practice' | 'profile';
@@ -8,8 +8,12 @@ export type MainTab = {
   id: MainTabId;
   label: string;
   href: '/(tabs)/home' | '/(tabs)/learn' | '/(tabs)/practice' | '/(tabs)/profile';
-  icon: 'home-outline' | 'book-outline' | 'flash-outline' | 'person-outline';
-  activeIcon: 'home' | 'book' | 'flash' | 'person';
+  icon:
+    | 'home-outline'
+    | 'book-outline'
+    | 'extension-puzzle-outline'
+    | 'person-outline';
+  activeIcon: 'home' | 'book' | 'extension-puzzle' | 'person';
 };
 
 export const MAIN_TABS: MainTab[] = [
@@ -31,8 +35,8 @@ export const MAIN_TABS: MainTab[] = [
     id: 'practice',
     label: 'Practice',
     href: '/(tabs)/practice',
-    icon: 'flash-outline',
-    activeIcon: 'flash',
+    icon: 'extension-puzzle-outline',
+    activeIcon: 'extension-puzzle',
   },
   {
     id: 'profile',

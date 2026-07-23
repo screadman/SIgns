@@ -1,7 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -17,7 +24,7 @@ import {
   opacity,
   spacing,
 } from '../../constants/theme';
-import { saveCompletedLesson } from '../../lib/storage';
+import { checkAndUnlockBadges, saveCompletedLesson } from '../../lib/storage';
 
 function getParam(value: string | string[] | undefined): string {
   return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
@@ -26,8 +33,19 @@ function getParam(value: string | string[] | undefined): string {
 export default function LessonScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
-  const lessonData = getLesson(getParam(params.id));
+  const lessonId = getParam(params.id);
+  const lessonData = getLesson(lessonId);
   const [isSaving, setIsSaving] = useState(false);
+  const [justLearned, setJustLearned] = useState(false);
+  const gotItScale = useRef(new Animated.Value(1)).current;
+  const checkOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    setJustLearned(false);
+    setIsSaving(false);
+    gotItScale.setValue(1);
+    checkOpacity.setValue(0);
+  }, [lessonId, gotItScale, checkOpacity]);
 
   if (!lessonData) {
     return (
@@ -55,6 +73,11 @@ export default function LessonScreen() {
         : 'ASL sign for';
 
   async function markLearned() {
+    await saveCompletedLesson(lesson.id);
+    await checkAndUnlockBadges();
+  }
+
+  async function goToNeighbor(targetId: string) {
     if (isSaving) {
       return;
     }
@@ -62,15 +85,56 @@ export default function LessonScreen() {
     setIsSaving(true);
 
     try {
-      await saveCompletedLesson(lesson.id);
+      await markLearned();
+      router.replace(`/lesson/${targetId}` as Href);
     } finally {
       setIsSaving(false);
     }
   }
 
-  async function goToNeighbor(targetId: string) {
-    await markLearned();
-    router.replace(`/lesson/${targetId}` as Href);
+  async function handleGotIt() {
+    if (isSaving || justLearned) {
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      await markLearned();
+      setJustLearned(true);
+
+      Animated.parallel([
+        Animated.sequence([
+          Animated.spring(gotItScale, {
+            toValue: 1.12,
+            friction: 4,
+            tension: 140,
+            useNativeDriver: true,
+          }),
+          Animated.spring(gotItScale, {
+            toValue: 1,
+            friction: 5,
+            tension: 120,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.timing(checkOpacity, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      await new Promise((resolve) => setTimeout(resolve, 650));
+
+      if (nextLesson) {
+        router.replace(`/lesson/${nextLesson.id}` as Href);
+      } else {
+        router.replace(`/module/${lesson.moduleId}` as Href);
+      }
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -111,7 +175,7 @@ export default function LessonScreen() {
         <View style={styles.bottomPanel}>
           <View style={styles.signNav}>
             <Pressable
-              disabled={!previousLesson}
+              disabled={!previousLesson || isSaving}
               onPress={() => {
                 if (previousLesson) {
                   void goToNeighbor(previousLesson.id);
@@ -121,13 +185,13 @@ export default function LessonScreen() {
               accessibilityLabel="Previous sign"
               style={({ pressed }) => [
                 styles.navArrow,
-                !previousLesson && styles.navArrowDisabled,
-                pressed && previousLesson && styles.pressed,
+                (!previousLesson || isSaving) && styles.navArrowDisabled,
+                pressed && previousLesson && !isSaving && styles.pressed,
               ]}
             >
               <Ionicons
                 name="arrow-back"
-                size={20}
+                size={18}
                 color={previousLesson ? colors.text : colors.disabled}
               />
             </Pressable>
@@ -138,7 +202,7 @@ export default function LessonScreen() {
             </View>
 
             <Pressable
-              disabled={!nextLesson}
+              disabled={!nextLesson || isSaving}
               onPress={() => {
                 if (nextLesson) {
                   void goToNeighbor(nextLesson.id);
@@ -148,13 +212,13 @@ export default function LessonScreen() {
               accessibilityLabel="Next sign"
               style={({ pressed }) => [
                 styles.navArrow,
-                !nextLesson && styles.navArrowDisabled,
-                pressed && nextLesson && styles.pressed,
+                (!nextLesson || isSaving) && styles.navArrowDisabled,
+                pressed && nextLesson && !isSaving && styles.pressed,
               ]}
             >
               <Ionicons
                 name="arrow-forward"
-                size={20}
+                size={18}
                 color={nextLesson ? colors.text : colors.disabled}
               />
             </Pressable>
@@ -162,28 +226,35 @@ export default function LessonScreen() {
 
           <View style={styles.actions}>
             <Pressable
-              disabled={!canQuiz}
+              disabled={!canQuiz || isSaving}
               onPress={() => {
-                if (!canQuiz) {
+                if (!canQuiz || isSaving) {
                   return;
                 }
 
-                void markLearned().then(() => {
-                  router.push(`/quiz/${lesson.id}` as Href);
-                });
+                void (async () => {
+                  setIsSaving(true);
+
+                  try {
+                    await markLearned();
+                    router.push(`/quiz/${lesson.id}` as Href);
+                  } finally {
+                    setIsSaving(false);
+                  }
+                })();
               }}
               accessibilityRole="button"
               accessibilityLabel="Optional practice"
-              accessibilityState={{ disabled: !canQuiz }}
+              accessibilityState={{ disabled: !canQuiz || isSaving }}
               style={({ pressed }) => [
                 styles.actionButton,
-                !canQuiz && styles.actionButtonDisabled,
-                pressed && canQuiz && styles.pressed,
+                (!canQuiz || isSaving) && styles.actionButtonDisabled,
+                pressed && canQuiz && !isSaving && styles.pressed,
               ]}
             >
               <Ionicons
-                name="flash"
-                size={26}
+                name="extension-puzzle"
+                size={20}
                 color={canQuiz ? colors.accent : colors.textMuted}
               />
               <Text
@@ -196,26 +267,42 @@ export default function LessonScreen() {
               </Text>
             </Pressable>
 
-            <Pressable
-              onPress={() => {
-                void markLearned();
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Mark as learned"
-              style={({ pressed }) => [
-                styles.actionButton,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Ionicons
-                name="checkmark-circle-outline"
-                size={26}
-                color={colors.success}
-              />
-              <Text style={styles.actionLabel}>
-                {isSaving ? 'Saving...' : 'Got it'}
-              </Text>
-            </Pressable>
+            <Animated.View style={{ transform: [{ scale: gotItScale }] }}>
+              <Pressable
+                disabled={isSaving || justLearned}
+                onPress={() => {
+                  void handleGotIt();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Mark as learned"
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  styles.gotItButton,
+                  justLearned && styles.gotItButtonDone,
+                  pressed && !justLearned && !isSaving && styles.pressed,
+                ]}
+              >
+                <View style={styles.gotItIconWrap}>
+                  <Ionicons
+                    name={justLearned ? 'checkmark-circle' : 'checkmark-circle-outline'}
+                    size={22}
+                    color={justLearned ? colors.white : colors.success}
+                  />
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[styles.gotItBurst, { opacity: checkOpacity }]}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.actionLabel,
+                    justLearned && styles.gotItLabelDone,
+                  ]}
+                >
+                  {justLearned ? 'Nice!' : isSaving ? 'Saving...' : 'Got it'}
+                </Text>
+              </Pressable>
+            </Animated.View>
           </View>
         </View>
       </View>
@@ -273,14 +360,14 @@ const styles = StyleSheet.create({
   },
   bottomPanel: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-    borderTopLeftRadius: borderRadius.xl,
-    borderTopRightRadius: borderRadius.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+    borderTopLeftRadius: borderRadius.lg,
+    borderTopRightRadius: borderRadius.lg,
     backgroundColor: colors.surfaceElevated,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   signNav: {
     flexDirection: 'row',
@@ -288,8 +375,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   navArrow: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: borderRadius.full,
@@ -306,30 +393,55 @@ const styles = StyleSheet.create({
   currentSignLabel: {
     color: colors.textMuted,
     fontFamily: fontFamily.body,
-    fontSize: fontSize.xs,
-    lineHeight: 15,
+    fontSize: 11,
+    lineHeight: 13,
   },
   currentSignValue: {
-    marginTop: 2,
+    marginTop: 0,
     color: colors.text,
     fontFamily: fontFamily.headingExtraBold,
-    fontSize: fontSize.lg,
-    lineHeight: 23,
+    fontSize: fontSize.base,
+    lineHeight: 20,
     textAlign: 'center',
   },
   actions: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingBottom: spacing.xs,
+    alignItems: 'center',
   },
   actionButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
     minWidth: 96,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
   },
   actionButtonDisabled: {
     opacity: opacity.muted,
+  },
+  gotItButton: {
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.successSurface,
+    paddingVertical: 8,
+    paddingHorizontal: spacing.md,
+  },
+  gotItButtonDone: {
+    backgroundColor: colors.success,
+  },
+  gotItIconWrap: {
+    width: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gotItBurst: {
+    position: 'absolute',
+    width: 28,
+    height: 28,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.success,
+    opacity: 0.25,
   },
   actionLabel: {
     color: colors.text,
@@ -339,6 +451,10 @@ const styles = StyleSheet.create({
   },
   actionLabelDisabled: {
     color: colors.textMuted,
+  },
+  gotItLabelDone: {
+    color: colors.white,
+    fontFamily: fontFamily.bodySemibold,
   },
   notFound: {
     flex: 1,

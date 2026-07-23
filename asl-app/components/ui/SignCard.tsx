@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ResizeMode, Video } from 'expo-av';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
-import type { AslGlyph } from '../../constants/aslLetters';
+import { hasMediaAsset, toImageSource, type AslGlyph } from '../../constants/aslLetters';
 import {
   borderRadius,
   borderWidth,
@@ -25,8 +24,7 @@ export function SignCard({
   accessibilityPrefix = 'ASL sign for',
   featured = false,
 }: SignCardProps) {
-  const hasVideo = typeof sign.video === 'number';
-  const hasImage = typeof sign.image === 'number';
+  const hasImage = hasMediaAsset(sign.image);
 
   return (
     <View
@@ -37,19 +35,9 @@ export function SignCard({
       <View
         style={[styles.imageContainer, featured && styles.featuredImageContainer]}
       >
-        {hasVideo ? (
-          <Video
-            source={sign.video}
-            style={[styles.video, featured && styles.featuredVideo]}
-            resizeMode={ResizeMode.CONTAIN}
-            shouldPlay
-            isLooping
-            isMuted
-            useNativeControls={false}
-          />
-        ) : hasImage ? (
+        {hasImage ? (
           <Image
-            source={sign.image}
+            source={toImageSource(sign.image)}
             style={[styles.image, featured && styles.featuredImage]}
             resizeMode="contain"
             accessibilityIgnoresInvertColors
@@ -57,11 +45,13 @@ export function SignCard({
         ) : (
           <View style={styles.mediaPlaceholder}>
             <Ionicons
-              name="videocam-outline"
+              name="images-outline"
               size={featured ? 40 : 28}
               color={colors.textMuted}
             />
-            <Text style={styles.mediaPlaceholderText}>Video coming soon</Text>
+            <Text style={styles.mediaPlaceholderText}>
+              Illustration coming soon
+            </Text>
           </View>
         )}
       </View>
@@ -111,7 +101,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primarySurface,
   },
   featuredImageContainer: {
-    height: 280,
+    height: 200,
     borderRadius: borderRadius.xl,
     backgroundColor: colors.signSurface,
   },
@@ -120,14 +110,6 @@ const styles = StyleSheet.create({
     height: 116,
   },
   featuredImage: {
-    width: 220,
-    height: 220,
-  },
-  video: {
-    width: '100%',
-    height: '100%',
-  },
-  featuredVideo: {
     width: '100%',
     height: '100%',
   },
@@ -152,9 +134,9 @@ const styles = StyleSheet.create({
     marginTop: spacing['2sm'],
   },
   featuredLabel: {
-    fontSize: 40,
-    lineHeight: 48,
-    marginTop: spacing['2md'],
+    fontSize: 32,
+    lineHeight: 38,
+    marginTop: spacing.md,
     textAlign: 'center',
   },
   description: {
@@ -171,12 +153,12 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 15,
     lineHeight: 22,
-    marginTop: spacing['2md'],
+    marginTop: spacing.sm,
   },
   tip: {
     width: '100%',
     maxWidth: 342,
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
     color: colors.textMuted,
     fontFamily: fontFamily.body,
     fontSize: fontSize.sm,

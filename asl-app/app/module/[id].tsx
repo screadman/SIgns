@@ -101,9 +101,22 @@ export default function ModuleScreen() {
         <View style={styles.header}>
           <View style={styles.headerTitleGroup}>
             <Pressable
-              onPress={() => router.back()}
+              onPress={() => {
+                if (router.canDismiss()) {
+                  router.dismiss();
+                  return;
+                }
+
+                if (router.canGoBack()) {
+                  router.back();
+                  return;
+                }
+
+                router.replace('/(tabs)/learn' as Href);
+              }}
               accessibilityRole="button"
               accessibilityLabel="Go back"
+              hitSlop={12}
               style={({ pressed }) => [
                 styles.backButton,
                 pressed && styles.pressed,
@@ -172,7 +185,7 @@ export default function ModuleScreen() {
                 </View>
                 <View style={styles.practiceIconWrap}>
                   <Ionicons
-                    name="flash"
+                    name="extension-puzzle"
                     size={28}
                     color={canPractice ? colors.white : colors.textMuted}
                   />

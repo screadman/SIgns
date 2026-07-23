@@ -53,7 +53,11 @@ export const PILL_TAB_BAR_HEIGHT = 52;
 export const PILL_TAB_BAR_GAP = spacing.sm;
 
 function resolveActiveKey(pathname: string) {
-  if (pathname.includes('practice') || pathname.includes('quiz')) {
+  if (
+    pathname.includes('practice') ||
+    pathname.includes('practice-mode') ||
+    pathname.includes('quiz')
+  ) {
     return 'practice';
   }
 

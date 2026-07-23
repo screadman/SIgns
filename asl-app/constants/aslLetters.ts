@@ -1,13 +1,40 @@
+import type { ImageSourcePropType } from 'react-native';
+
 export type AslGlyph = {
   id: string;
   label: string;
-  /** Local PNG/require asset. Optional until video/GIF media is ready. */
-  image?: number;
-  /** Local MP4/require asset for motion signs. */
-  video?: number;
+  /** Local PNG still. Optional until verified ASL art is ready. */
+  image?: ImageSourcePropType;
   description: string;
   tip: string;
 };
+
+/** Works on native (number) and web (string / object source). */
+export function hasMediaAsset(value: unknown): boolean {
+  if (typeof value === 'number') {
+    return true;
+  }
+
+  if (typeof value === 'string') {
+    return value.length > 0;
+  }
+
+  return typeof value === 'object' && value !== null;
+}
+
+export function toImageSource(
+  value: ImageSourcePropType | string | undefined,
+): ImageSourcePropType | undefined {
+  if (value == null) {
+    return undefined;
+  }
+
+  if (typeof value === 'string') {
+    return { uri: value };
+  }
+
+  return value;
+}
 
 export type AslLetter = AslGlyph;
 
