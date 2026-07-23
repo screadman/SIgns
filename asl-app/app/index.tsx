@@ -1,12 +1,19 @@
 import { Redirect, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors } from '../constants/theme';
 import { hasSeenOnboarding } from '../lib/onboardingStorage';
 
 export default function IndexScreen() {
   const [hasSeen, setHasSeen] = useState<boolean | null>(null);
+
+  // TEMPORAIRE — dev only : force le retour à l'onboarding pour tester.
+  // Retire ce useEffect une fois que t'as fini de tester.
+  useEffect(() => {
+    void AsyncStorage.removeItem('onboarding_seen');
+  }, []);
 
   useEffect(() => {
     let isMounted = true;

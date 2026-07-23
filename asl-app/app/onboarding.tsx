@@ -14,7 +14,10 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 import {
   OnboardingDots,
@@ -71,10 +74,11 @@ const FEATURES: Feature[] = [
 export default function OnboardingScreen() {
   const router = useRouter();
   const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList<SlideId>>(null);
   const screenOpacity = useRef(new Animated.Value(1)).current;
   const [activeIndex, setActiveIndex] = useState(0);
-  const [pageHeight, setPageHeight] = useState(height);
+  const pageHeight = height - insets.top - insets.bottom;
   const [isFinishing, setIsFinishing] = useState(false);
 
   const finishOnboarding = () => {
@@ -114,9 +118,6 @@ export default function OnboardingScreen() {
           ref={listRef}
           style={styles.carousel}
           contentContainerStyle={styles.carouselContent}
-          onLayout={(event) => {
-            setPageHeight(event.nativeEvent.layout.height);
-          }}
           data={SLIDES}
           extraData={activeIndex}
           keyExtractor={(item) => item}
