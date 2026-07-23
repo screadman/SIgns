@@ -30,20 +30,20 @@ export function PrimaryButton({
   ...pressableProps
 }: PrimaryButtonProps) {
   const isDisabled = disabled || loading;
+  
 
   return (
     <Pressable
-      {...pressableProps}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: isDisabled, busy: loading }}
-      disabled={isDisabled}
-      style={({ pressed }) => [
-        styles.button,
-        fullWidth && styles.fullWidth,
-        pressed && styles.pressed,
-        isDisabled && styles.disabled,
-      ]}
-    >
+       {...pressableProps}
+  accessibilityRole="button"
+  accessibilityState={{ disabled: isDisabled, busy: loading }}
+  disabled={isDisabled}
+  style={[
+    styles.button,
+    fullWidth ? styles.fullWidth : undefined,
+    isDisabled ? styles.disabled : undefined,
+  ]}
+>
       {loading ? (
         <ActivityIndicator color={colors.textInverse} />
       ) : (
@@ -63,10 +63,18 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
     backgroundColor: colors.primary,
   },
+  buttonCompact: {
+    minWidth: 168,
+    height: controlHeight.md,
+    paddingHorizontal: spacing.xl,
+  },
   label: {
     color: colors.textInverse,
     fontFamily: fontFamily.heading,
     fontSize: fontSize.lg,
+  },
+  labelCompact: {
+    fontSize: fontSize.base,
   },
   fullWidth: {
     width: '100%',
