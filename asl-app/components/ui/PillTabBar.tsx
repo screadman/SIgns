@@ -5,7 +5,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MAIN_TABS } from '../../constants/navigation';
 import {
-  borderRadius,
   colors,
   iconSize,
   shadows,
@@ -196,7 +195,8 @@ const styles = StyleSheet.create({
     width: '84%',
     height: PILL_TAB_BAR_HEIGHT,
     paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.full,
+    borderRadius: PILL_TAB_BAR_HEIGHT / 2,
+    overflow: 'hidden',
     backgroundColor: colors.text,
     ...shadows.lg,
   },
@@ -210,7 +210,9 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: borderRadius.full,
+    // Explicit half-size radius + clip: Android often draws a square with 9999 alone.
+    borderRadius: 20,
+    overflow: 'hidden',
   },
   iconWrapActive: {
     backgroundColor: colors.white,

@@ -1,6 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { type Href, useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PILL_TAB_BAR_HEIGHT } from '../../components/ui/PillTabBar';
@@ -18,9 +25,11 @@ import {
 
 function ModeTile({
   mode,
+  width,
   onPress,
 }: {
   mode: PracticeMode;
+  width: number;
   onPress: () => void;
 }) {
   return (
@@ -30,7 +39,10 @@ function ModeTile({
       accessibilityLabel={`${mode.title}. ${mode.description}`}
       style={({ pressed }) => [
         styles.tile,
-        { backgroundColor: mode.tileColor },
+        {
+          width,
+          backgroundColor: mode.tileColor,
+        },
         pressed && styles.pressed,
       ]}
     >
@@ -77,8 +89,16 @@ function ChallengesTile({
 
 export default function PracticeScreen() {
   const router = useRouter();
+  const { width: windowWidth } = useWindowDimensions();
   const gridModes = PRACTICE_MODES.filter((mode) => mode.id !== 'challenges');
   const challengesMode = PRACTICE_MODES.find((mode) => mode.id === 'challenges');
+
+  const horizontalPadding = spacing.lg * 2;
+  const gridGap = spacing['2sm'];
+  const tileWidth = Math.max(
+    140,
+    Math.floor((windowWidth - horizontalPadding - gridGap) / 2),
+  );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -106,6 +126,7 @@ export default function PracticeScreen() {
             <ModeTile
               key={mode.id}
               mode={mode}
+              width={tileWidth}
               onPress={() => {
                 router.push(`/practice-mode/${mode.id}` as Href);
               }}
@@ -145,7 +166,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   challengesTile: {
-    width: '100%',
+    alignSelf: 'stretch',
     minHeight: 88,
     flexDirection: 'row',
     alignItems: 'center',
@@ -154,6 +175,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     marginBottom: spacing['2sm'],
+    overflow: 'hidden',
     ...shadows.md,
   },
   challengesIconWrap: {
@@ -184,15 +206,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: spacing['2sm'],
+    alignContent: 'flex-start',
+    rowGap: spacing['2sm'],
   },
   tile: {
-    width: '48%',
     minHeight: 168,
     borderRadius: borderRadius.xl,
     padding: spacing.md,
     justifyContent: 'flex-end',
     gap: spacing.xs,
+    overflow: 'hidden',
     ...shadows.md,
   },
   tileIconWrap: {
@@ -202,7 +225,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.22)',
-    marginBottom: 'auto',
+    marginBottom: spacing.md,
   },
   tileTitle: {
     color: colors.white,
