@@ -70,28 +70,27 @@ export function ModuleCard({
   const cardHeight = Math.max(96, Math.round(cardWidth / 1.55));
 
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={locked}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: locked }}
-      accessibilityLabel={
-        locked
-          ? `${module.title}, locked`
-          : `${module.title}, ${progressPercentage}% complete`
-      }
-      style={({ pressed }) => [
-        styles.card,
-        {
-          width: cardWidth,
-          height: cardHeight,
-          backgroundColor: locked
-            ? colors.surfaceMuted
-            : module.tileColor || colors.primary,
-        },
-        pressed && !locked && styles.pressed,
-      ]}
-    >
+   <Pressable
+  onPress={onPress}
+  disabled={locked}
+  accessibilityRole="button"
+  accessibilityState={{ disabled: locked }}
+  accessibilityLabel={
+    locked
+      ? `${module.title}, locked`
+      : `${module.title}, ${progressPercentage}% complete`
+  }
+  style={[
+    styles.card,
+    {
+      width: cardWidth,
+      height: cardHeight,
+      backgroundColor: locked
+        ? colors.surfaceMuted
+        : module.tileColor || colors.primary,
+    },
+  ]}
+>
       <View style={styles.glyphWrap}>
         {locked ? (
           <View style={styles.lockBadge}>
