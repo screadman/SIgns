@@ -32,21 +32,20 @@ export function PrimaryButton({
   ...pressableProps
 }: PrimaryButtonProps) {
   const isDisabled = disabled || loading;
+  
 
   return (
     <Pressable
-      {...pressableProps}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: isDisabled, busy: loading }}
-      disabled={isDisabled}
-      style={({ pressed }) => [
-        styles.button,
-        compact && styles.buttonCompact,
-        fullWidth && styles.fullWidth,
-        pressed && styles.pressed,
-        isDisabled && styles.disabled,
-      ]}
-    >
+       {...pressableProps}
+  accessibilityRole="button"
+  accessibilityState={{ disabled: isDisabled, busy: loading }}
+  disabled={isDisabled}
+  style={[
+    styles.button,
+    fullWidth ? styles.fullWidth : undefined,
+    isDisabled ? styles.disabled : undefined,
+  ]}
+>
       {loading ? (
         <ActivityIndicator color={colors.textInverse} />
       ) : (

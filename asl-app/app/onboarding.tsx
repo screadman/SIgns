@@ -14,7 +14,10 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 import {
   OnboardingDots,
@@ -71,6 +74,7 @@ const FEATURES: Feature[] = [
 
 export default function OnboardingScreen() {
   const router = useRouter();
+
   const { width } = useWindowDimensions();
   const listRef = useRef<FlatList<SlideId>>(null);
   const screenOpacity = useRef(new Animated.Value(1)).current;
@@ -397,4 +401,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     lineHeight: lineHeight.xs,
   },
+
 });
+
