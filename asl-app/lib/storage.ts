@@ -312,6 +312,11 @@ async function recordActivityToday(): Promise<string[]> {
   return updatedDates;
 }
 
+export async function startStreakToday() {
+  await recordActivityToday();
+  return calculateStreak();
+}
+
 export async function calculateStreak(): Promise<number> {
   const dates = await getActivityDates();
 

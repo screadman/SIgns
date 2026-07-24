@@ -16,7 +16,6 @@ import {
 } from 'react-native';
 import {
   SafeAreaView,
-  useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
 import {
@@ -33,7 +32,6 @@ import {
   lineHeight,
   spacing,
 } from '../constants/theme';
-import { markOnboardingAsSeen } from '../lib/onboardingStorage';
 
 const WELCOME_ILLUSTRATION = require('../assets/onboarding/welcome.png');
 const START_ILLUSTRATION = require('../assets/onboarding/start.png');
@@ -95,9 +93,8 @@ export default function OnboardingScreen() {
       easing: Easing.out(Easing.cubic),
       useNativeDriver: USE_NATIVE_DRIVER,
     }).start(() => {
-      void markOnboardingAsSeen().finally(() => {
-        router.replace('/(tabs)/home');
-      });
+      setIsFinishing(false);
+      router.replace('/onboarding-ready');
     });
   };
 
@@ -186,7 +183,7 @@ export default function OnboardingScreen() {
                     badgeTone="accent"
                     animateBadge
                     title="Ready to Start?"
-                    subtitle="No account required. Start learning now."
+                    subtitle="A few quick questions, then you are in."
                     illustration={START_ILLUSTRATION}
                     width={width}
                     height={pageHeight}

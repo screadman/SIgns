@@ -28,20 +28,20 @@ import {
   getTotalXP,
   getUnlockedBadges,
 } from '../../lib/storage';
+import { getOnboardingProfile } from '../../lib/onboardingStorage';
 
 type ProfileData = {
+  name: string | null;
   xp: number;
   streak: number;
   lessonsCompleted: number;
   unlockedBadges: BadgeId[];
+  notificationsOptIn: boolean;
 };
 
 export default function ProfileScreen() {
   const [data, setData] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  // NOTE: local UI state only — no notification system exists yet in the
-  // codebase (no permissions request, no storage key, no push setup).
-  // This toggle is a visual placeholder until that's built.
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   useFocusEffect(
@@ -49,21 +49,26 @@ export default function ProfileScreen() {
       let isActive = true;
 
       async function loadProfile() {
-        const [xp, streak, completedLessonIds, unlockedBadges] =
+        const [xp, streak, completedLessonIds, unlockedBadges, onboarding] =
           await Promise.all([
             getTotalXP(),
             calculateStreak(),
             getCompletedLessons(),
             getUnlockedBadges(),
+            getOnboardingProfile(),
           ]);
 
         if (isActive) {
+          const notificationsOptIn = onboarding?.notificationsOptIn ?? true;
           setData({
+            name: onboarding?.name?.trim() || null,
             xp,
             streak,
             lessonsCompleted: completedLessonIds.length,
             unlockedBadges,
+            notificationsOptIn,
           });
+          setNotificationsEnabled(notificationsOptIn);
           setIsLoading(false);
         }
       }
@@ -88,6 +93,8 @@ export default function ProfileScreen() {
     );
   }
 
+  const avatarLetter = data.name ? data.name.charAt(0).toUpperCase() : '👋';
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
@@ -96,9 +103,11 @@ export default function ProfileScreen() {
       >
         <View style={styles.identity}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>👋</Text>
+            <Text style={styles.avatarText}>{avatarLetter}</Text>
           </View>
-          <Text style={styles.name}>Your progress</Text>
+          <Text style={styles.name}>
+            {data.name ? data.name : 'Your progress'}
+          </Text>
           <View style={styles.levelPill}>
             <Text style={styles.levelPillText}>Level {level.level}</Text>
           </View>
@@ -208,6 +217,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: {
+    color: colors.primary,
+    fontFamily: fontFamily.headingExtraBold,
     fontSize: 30,
   },
   name: {
