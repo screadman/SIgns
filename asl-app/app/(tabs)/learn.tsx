@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    columnGap: spacing['2sm'],
+    alignContent: 'flex-start',
     rowGap: spacing['2sm'],
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,

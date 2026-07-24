@@ -1,5 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 
 import type { LearningModule } from '../../constants/learning';
 import {
@@ -49,9 +55,19 @@ export function ModuleCard({
   locked = false,
   onPress,
 }: ModuleCardProps) {
+  const { width: windowWidth } = useWindowDimensions();
   const totalLessons = module.lessons.length;
   const progressPercentage =
     totalLessons === 0 ? 0 : Math.round((completedLessons / totalLessons) * 100);
+
+  // Pixel sizes avoid Android collapse with width % + aspectRatio in flexWrap grids.
+  const gridGap = spacing['2sm'];
+  const horizontalPadding = spacing.lg * 2;
+  const cardWidth = Math.max(
+    140,
+    Math.floor((windowWidth - horizontalPadding - gridGap) / 2),
+  );
+  const cardHeight = Math.max(96, Math.round(cardWidth / 1.55));
 
   return (
     <Pressable
@@ -67,7 +83,11 @@ export function ModuleCard({
       style={({ pressed }) => [
         styles.card,
         {
-          backgroundColor: locked ? colors.surfaceMuted : module.tileColor,
+          width: cardWidth,
+          height: cardHeight,
+          backgroundColor: locked
+            ? colors.surfaceMuted
+            : module.tileColor || colors.primary,
         },
         pressed && !locked && styles.pressed,
       ]}
@@ -93,11 +113,10 @@ export function ModuleCard({
 
 const styles = StyleSheet.create({
   card: {
-    width: '45%',
-    aspectRatio: 1.55,
     borderRadius: borderRadius.xl,
     padding: spacing.sm,
     justifyContent: 'space-between',
+    overflow: 'hidden',
     ...shadows.md,
   },
   pressed: {
