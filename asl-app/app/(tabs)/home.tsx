@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { type Href, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,13 +11,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ModuleCard, SkeletonLoader } from '../../components/ui';
+import { SkeletonLoader } from '../../components/ui';
 import { PILL_TAB_BAR_HEIGHT } from '../../components/ui/PillTabBar';
-import {
-  LEARNING_MODULES,
-  getLearningModule,
-  type Lesson,
-} from '../../constants/learning';
+import { LEARNING_MODULES, type Lesson } from '../../constants/learning';
 import {
   borderRadius,
   borderWidth,
@@ -37,7 +34,7 @@ import {
 } from '../../lib/storage';
 
 const DAILY_QUIZ_GOAL = 2;
-const PREVIEW_MODULE_COUNT = 4;
+const PREVIEW_MODULE_COUNT = 3;
 
 type HomeData = {
   xp: number;
@@ -47,24 +44,14 @@ type HomeData = {
   completedLessonIds: string[];
 };
 
-function motivationalMessage(streak: number, allCaughtUp: boolean): string {
+function headline(streak: number, allCaughtUp: boolean): string {
   if (allCaughtUp) {
-    return "You've completed every lesson! Explore the dictionary anytime 🎉";
+    return "You've finished every lesson! 🎉";
   }
-
-  if (streak >= 7) {
-    return `${streak} days strong — you're unstoppable 🔥`;
-  }
-
-  if (streak >= 3) {
-    return `${streak} day streak! Keep the momentum going 🔥`;
-  }
-
   if (streak >= 1) {
-    return "You're on a roll — keep it up today!";
+    return 'Great streak! Keep it up! 🔥';
   }
-
-  return 'Ready to learn a new sign today?';
+  return 'Ready to learn today?';
 }
 
 export default function HomeScreen() {
@@ -100,19 +87,15 @@ export default function HomeScreen() {
     }, []),
   );
 
-  const level = useMemo(() => getLevel(data?.xp ?? 0), [data?.xp]);
-
   const previewModules = useMemo(
     () => LEARNING_MODULES.slice(0, PREVIEW_MODULE_COUNT),
     [],
   );
 
-  const nextLessonModule = data?.nextLesson
-    ? getLearningModule(data.nextLesson.moduleId)
-    : undefined;
-
   const dailyGoalCount = data?.dailyProgress.quizzesFinished ?? 0;
-  const dailyGoalProgress = Math.min(1, dailyGoalCount / DAILY_QUIZ_GOAL);
+  const dailyGoalPercent = Math.round(
+    Math.min(1, dailyGoalCount / DAILY_QUIZ_GOAL) * 100,
+  );
 
   if (isLoading || !data) {
     return (
@@ -124,6 +107,18 @@ export default function HomeScreen() {
     );
   }
 
+  const nextLessonModule = data.nextLesson
+    ? LEARNING_MODULES.find((m) => m.id === data.nextLesson!.moduleId)
+    : undefined;
+  const nextLessonModuleCompleted = nextLessonModule
+    ? nextLessonModule.lessons.filter((lesson) =>
+        data.completedLessonIds.includes(lesson.id),
+      ).length
+    : 0;
+  const nextLessonModuleProgress = nextLessonModule
+    ? nextLessonModuleCompleted / nextLessonModule.lessons.length
+    : 0;
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
@@ -133,26 +128,20 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.identityRow}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>👋</Text>
+              <Text style={styles.avatarText}>SA</Text>
             </View>
-            <View>
-              <Text style={styles.greeting}>Welcome back</Text>
-              <View style={styles.streakRow}>
-                <Ionicons name="flame" size={14} color={colors.accent} />
-                <Text style={styles.streakText}>
-                  {data.streak} day{data.streak === 1 ? '' : 's'} streak
-                </Text>
-              </View>
+            <View style={styles.streakPill}>
+              <Ionicons name="flame" size={14} color={colors.accent} />
+              <Text style={styles.streakPillText}>{data.streak}</Text>
             </View>
           </View>
-
           <View style={styles.xpPill}>
-            <Text style={styles.xpText}>{data.xp} XP</Text>
+            <Text style={styles.xpText}>XP {data.xp}</Text>
           </View>
         </View>
 
-        <Text style={styles.motivation}>
-          {motivationalMessage(data.streak, data.nextLesson === null)}
+        <Text style={styles.headline}>
+          {headline(data.streak, data.nextLesson === null)}
         </Text>
 
         {data.nextLesson && nextLessonModule ? (
@@ -162,22 +151,40 @@ export default function HomeScreen() {
               router.push(`/lesson/${data.nextLesson!.id}` as Href)
             }
             accessibilityRole="button"
-            accessibilityLabel={`Continue learning: ${data.nextLesson.title}`}
+            accessibilityLabel={`Continue lesson: ${data.nextLesson.title}`}
           >
-            <Text style={styles.continueLabel}>CONTINUE LEARNING</Text>
-            <View style={styles.continueRow}>
-              <View style={styles.continueTextCol}>
-                <Text style={styles.continueModule}>
-                  {nextLessonModule.title}
-                </Text>
-                <Text style={styles.continueTitle}>
-                  {data.nextLesson.title}
-                </Text>
-              </View>
-              <View style={styles.continueButton}>
-                <Text style={styles.continueButtonText}>Continue</Text>
+            <View style={styles.continueThumb}>
+              {data.nextLesson.sign.image ? (
+                <Image
+                  source={data.nextLesson.sign.image}
+                  style={styles.continueThumbImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Ionicons
+                  name="hand-left-outline"
+                  size={28}
+                  color={colors.primary}
+                />
+              )}
+            </View>
+            <View style={styles.continueTextCol}>
+              <Text style={styles.continueLabel}>CONTINUE LESSON</Text>
+              <Text style={styles.continueTitle}>{data.nextLesson.title}</Text>
+              <View style={styles.track}>
+                <View
+                  style={[
+                    styles.trackFill,
+                    { width: `${nextLessonModuleProgress * 100}%` },
+                  ]}
+                />
               </View>
             </View>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={colors.textMuted}
+            />
           </Pressable>
         ) : (
           <View style={styles.continueCardDone}>
@@ -188,49 +195,63 @@ export default function HomeScreen() {
         )}
 
         <View style={styles.progressCard}>
-          <Text style={styles.progressLabel}>
-            Today's goal — {dailyGoalCount} of {DAILY_QUIZ_GOAL} quizzes
-          </Text>
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${dailyGoalProgress * 100}%` },
-              ]}
-            />
+          <View style={styles.progressRing}>
+            <Text style={styles.progressRingText}>{dailyGoalPercent}%</Text>
+          </View>
+          <View style={styles.progressTextCol}>
+            <Text style={styles.progressTitle}>Today&apos;s progress</Text>
+            <Text style={styles.progressSubtitle}>
+              Complete {DAILY_QUIZ_GOAL} lessons today ({dailyGoalCount}/
+              {DAILY_QUIZ_GOAL} done)
+            </Text>
           </View>
         </View>
 
-        <View style={styles.levelCard}>
-          <Text style={styles.levelLabel}>
-            Level {level.level}
-            {level.isMaxLevel ? ' (max)' : ` — ${level.xpIntoLevel}/${level.xpForNext} XP`}
-          </Text>
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressFill,
-                styles.levelFill,
-                { width: `${level.progress * 100}%` },
-              ]}
-            />
-          </View>
-        </View>
-
-        <Text style={styles.sectionTitle}>Keep exploring</Text>
-        <View style={styles.moduleGrid}>
+        <Text style={styles.sectionTitle}>Learning Modules</Text>
+        <View style={styles.moduleList}>
           {previewModules.map((module) => {
             const completedInModule = module.lessons.filter((lesson) =>
               data.completedLessonIds.includes(lesson.id),
             ).length;
+            const totalInModule = module.lessons.length;
+            const moduleProgress =
+              totalInModule === 0 ? 0 : completedInModule / totalInModule;
 
             return (
-              <ModuleCard
+              <Pressable
                 key={module.id}
-                module={module}
-                completedLessons={completedInModule}
+                style={styles.moduleRow}
                 onPress={() => router.push(`/module/${module.id}` as Href)}
-              />
+                accessibilityRole="button"
+                accessibilityLabel={`${module.title}, ${completedInModule} of ${totalInModule} completed`}
+              >
+                <View
+                  style={[
+                    styles.moduleIcon,
+                    { backgroundColor: module.surfaceColor },
+                  ]}
+                >
+                  <Ionicons
+                    name={module.icon}
+                    size={22}
+                    color={module.color}
+                  />
+                </View>
+                <View style={styles.moduleTextCol}>
+                  <Text style={styles.moduleTitle}>{module.title}</Text>
+                  <Text style={styles.moduleSubtitle}>
+                    {completedInModule} of {totalInModule} completed
+                  </Text>
+                  <View style={styles.track}>
+                    <View
+                      style={[
+                        styles.trackFill,
+                        { width: `${moduleProgress * 100}%` },
+                      ]}
+                    />
+                  </View>
+                </View>
+              </Pressable>
             );
           })}
         </View>
@@ -258,94 +279,88 @@ const styles = StyleSheet.create({
   identityRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing['2sm'],
   },
   avatar: {
     width: 48,
     height: 48,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.primarySurface,
+    borderWidth: borderWidth.thin + 1,
+    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 20,
-  },
-  greeting: {
-    color: colors.text,
+    color: colors.primary,
     fontFamily: fontFamily.heading,
-    fontSize: fontSize.base,
+    fontSize: fontSize.sm,
   },
-  streakRow: {
+  streakPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 2,
+    paddingHorizontal: spacing['2sm'],
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.accentSurface,
   },
-  streakText: {
-    color: colors.textMuted,
-    fontFamily: fontFamily.bodyMedium,
+  streakPillText: {
+    color: colors.accent,
+    fontFamily: fontFamily.heading,
     fontSize: fontSize.sm,
   },
   xpPill: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing['2sm'],
     borderRadius: borderRadius.full,
-    backgroundColor: colors.primarySurface,
+    backgroundColor: colors.primary,
   },
   xpText: {
-    color: colors.primary,
+    color: colors.white,
     fontFamily: fontFamily.heading,
     fontSize: fontSize.sm,
   },
-  motivation: {
-    color: colors.textMuted,
-    fontFamily: fontFamily.bodyMedium,
-    fontSize: fontSize.base,
-    lineHeight: lineHeight.base,
-  },
-  continueCard: {
-    borderRadius: borderRadius.xl,
-    backgroundColor: colors.primary,
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  continueLabel: {
-    color: colors.white,
-    opacity: 0.7,
-    fontFamily: fontFamily.heading,
-    fontSize: fontSize.xs,
-  },
-  continueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  continueTextCol: {
-    flex: 1,
-    gap: 2,
-  },
-  continueModule: {
-    color: colors.white,
-    opacity: 0.75,
-    fontFamily: fontFamily.bodyMedium,
-    fontSize: fontSize.xs,
-  },
-  continueTitle: {
-    color: colors.white,
+  headline: {
+    color: colors.text,
     fontFamily: fontFamily.headingExtraBold,
     fontSize: fontSize.xl,
   },
-  continueButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing['2sm'],
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.white,
+  continueCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: borderRadius.xl,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: borderWidth.thin,
+    borderColor: colors.border,
   },
-  continueButtonText: {
+  continueThumb: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primarySurface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  continueThumbImage: {
+    width: '100%',
+    height: '100%',
+  },
+  continueTextCol: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  continueLabel: {
     color: colors.primary,
     fontFamily: fontFamily.heading,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
+  },
+  continueTitle: {
+    color: colors.text,
+    fontFamily: fontFamily.headingExtraBold,
+    fontSize: fontSize.lg,
   },
   continueCardDone: {
     borderRadius: borderRadius.xl,
@@ -359,49 +374,92 @@ const styles = StyleSheet.create({
     lineHeight: lineHeight.sm,
   },
   progressCard: {
-    borderRadius: borderRadius.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: borderRadius.xl,
+    backgroundColor: colors.surfaceElevated,
     borderWidth: borderWidth.thin,
     borderColor: colors.border,
-    padding: spacing.md,
-    gap: spacing['2sm'],
   },
-  progressLabel: {
+  progressRing: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.full,
+    borderWidth: 4,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressRingText: {
+    color: colors.primary,
+    fontFamily: fontFamily.heading,
+    fontSize: fontSize.xs,
+  },
+  progressTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  progressTitle: {
     color: colors.text,
+    fontFamily: fontFamily.heading,
+    fontSize: fontSize.base,
+  },
+  progressSubtitle: {
+    color: colors.textMuted,
     fontFamily: fontFamily.bodyMedium,
     fontSize: fontSize.sm,
-  },
-  progressTrack: {
-    height: 8,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.border,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-  },
-  levelCard: {
-    borderRadius: borderRadius.lg,
-    borderWidth: borderWidth.thin,
-    borderColor: colors.border,
-    padding: spacing.md,
-    gap: spacing['2sm'],
-  },
-  levelLabel: {
-    color: colors.text,
-    fontFamily: fontFamily.bodyMedium,
-    fontSize: fontSize.sm,
-  },
-  levelFill: {
-    backgroundColor: colors.accent,
   },
   sectionTitle: {
     color: colors.text,
-    fontFamily: fontFamily.heading,
+    fontFamily: fontFamily.headingExtraBold,
     fontSize: fontSize.lg,
   },
-  moduleGrid: {
+  moduleList: {
     gap: spacing.md,
+  },
+  moduleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: borderRadius.xl,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: borderWidth.thin,
+    borderColor: colors.border,
+  },
+  moduleIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moduleTextCol: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  moduleTitle: {
+    color: colors.text,
+    fontFamily: fontFamily.heading,
+    fontSize: fontSize.base,
+  },
+  moduleSubtitle: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: fontSize.sm,
+  },
+  track: {
+    height: 6,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.border,
+    overflow: 'hidden',
+    marginTop: 4,
+  },
+  trackFill: {
+    height: '100%',
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary,
   },
 });

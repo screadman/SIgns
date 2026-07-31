@@ -22,13 +22,35 @@ import {
   spacing,
 } from '../../constants/theme';
 import { getLevel } from '../../lib/levels';
+import { getOnboardingProfile } from '../../lib/onboardingStorage';
 import {
   calculateStreak,
   getCompletedLessons,
   getTotalXP,
   getUnlockedBadges,
 } from '../../lib/storage';
-import { getOnboardingProfile } from '../../lib/onboardingStorage';
+
+// UI-only label. lib/levels.ts has no tier names; this is a display
+// convenience derived from the level number, not stored data.
+function levelTier(level: number): string {
+  if (level <= 1) return 'Beginner';
+  if (level <= 3) return 'Intermediate';
+  if (level <= 6) return 'Advanced';
+  return 'Expert';
+}
+
+function avatarLabel(name: string | null): string {
+  if (!name) {
+    return '?';
+  }
+
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0].charAt(0)}${parts[1].charAt(0)}`.toUpperCase();
+  }
+
+  return parts[0].charAt(0).toUpperCase();
+}
 
 type ProfileData = {
   name: string | null;
@@ -36,13 +58,13 @@ type ProfileData = {
   streak: number;
   lessonsCompleted: number;
   unlockedBadges: BadgeId[];
-  notificationsOptIn: boolean;
 };
 
 export default function ProfileScreen() {
   const [data, setData] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  // Local UI state only for now. No push permission / scheduler wired yet.
+  const [remindersEnabled, setRemindersEnabled] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
@@ -59,16 +81,14 @@ export default function ProfileScreen() {
           ]);
 
         if (isActive) {
-          const notificationsOptIn = onboarding?.notificationsOptIn ?? true;
           setData({
             name: onboarding?.name?.trim() || null,
             xp,
             streak,
             lessonsCompleted: completedLessonIds.length,
             unlockedBadges,
-            notificationsOptIn,
           });
-          setNotificationsEnabled(notificationsOptIn);
+          setRemindersEnabled(onboarding?.notificationsOptIn ?? true);
           setIsLoading(false);
         }
       }
@@ -93,7 +113,7 @@ export default function ProfileScreen() {
     );
   }
 
-  const avatarLetter = data.name ? data.name.charAt(0).toUpperCase() : '👋';
+  const displayName = data.name ? data.name : 'Your progress';
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -103,22 +123,25 @@ export default function ProfileScreen() {
       >
         <View style={styles.identity}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{avatarLetter}</Text>
+            <Text style={styles.avatarText}>{avatarLabel(data.name)}</Text>
           </View>
-          <Text style={styles.name}>
-            {data.name ? data.name : 'Your progress'}
+          <Text style={styles.name}>{displayName}</Text>
+          <Text style={styles.levelSubtitle}>
+            Level {level.level}: {levelTier(level.level)}
           </Text>
-          <View style={styles.levelPill}>
-            <Text style={styles.levelPillText}>Level {level.level}</Text>
-          </View>
         </View>
 
         <View style={styles.levelProgressCard}>
-          <Text style={styles.levelProgressLabel}>
-            {level.isMaxLevel
-              ? 'Max level reached'
-              : `${level.xpIntoLevel} / ${level.xpForNext} XP to Level ${level.level + 1}`}
-          </Text>
+          <View style={styles.levelProgressHeader}>
+            <Text style={styles.levelProgressLabel}>
+              Level {level.level} Progress
+            </Text>
+            <Text style={styles.levelProgressValue}>
+              {level.isMaxLevel
+                ? 'Max'
+                : `${level.xpIntoLevel} / ${level.xpForNext} XP`}
+            </Text>
+          </View>
           <View style={styles.track}>
             <View
               style={[styles.trackFill, { width: `${level.progress * 100}%` }]}
@@ -128,14 +151,21 @@ export default function ProfileScreen() {
 
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{data.streak}</Text>
+            <Ionicons name="flame" size={20} color={colors.accent} />
+            <Text style={styles.statValue}>{data.streak} days</Text>
             <Text style={styles.statLabel}>Streak</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{data.xp}</Text>
-            <Text style={styles.statLabel}>Total XP</Text>
+            <Ionicons name="star" size={20} color={colors.primary} />
+            <Text style={styles.statValue}>{data.xp} XP</Text>
+            <Text style={styles.statLabel}>Total Points</Text>
           </View>
           <View style={styles.statCard}>
+            <Ionicons
+              name="checkmark-circle"
+              size={20}
+              color={colors.success}
+            />
             <Text style={styles.statValue}>{data.lessonsCompleted}</Text>
             <Text style={styles.statLabel}>Lessons</Text>
           </View>
@@ -147,43 +177,53 @@ export default function ProfileScreen() {
             const unlocked = data.unlockedBadges.includes(badge.id);
 
             return (
-              <View
-                key={badge.id}
-                style={[styles.badgeCard, !unlocked && styles.badgeCardLocked]}
-              >
-                <View
-                  style={[
-                    styles.badgeIcon,
-                    unlocked
-                      ? styles.badgeIconUnlocked
-                      : styles.badgeIconLocked,
-                  ]}
-                >
+              <View key={badge.id} style={styles.badgeCard}>
+                <View style={styles.badgeIconWrap}>
                   <Ionicons
                     name={badge.icon}
-                    size={22}
-                    color={unlocked ? colors.white : colors.textMuted}
+                    size={26}
+                    color={unlocked ? colors.primary : colors.border}
                   />
+                  {!unlocked && (
+                    <View style={styles.badgeLockBadge}>
+                      <Ionicons
+                        name="lock-closed"
+                        size={10}
+                        color={colors.white}
+                      />
+                    </View>
+                  )}
                 </View>
                 <Text
                   style={[
-                    styles.badgeLabel,
-                    !unlocked && styles.badgeLabelLocked,
+                    styles.badgeName,
+                    !unlocked && styles.badgeNameLocked,
                   ]}
-                  numberOfLines={2}
+                  numberOfLines={1}
                 >
                   {badge.name}
+                </Text>
+                <Text style={styles.badgeDescription} numberOfLines={2}>
+                  {badge.description}
                 </Text>
               </View>
             );
           })}
         </View>
 
+        <Text style={styles.sectionTitle}>Settings</Text>
         <View style={styles.settingsRow}>
-          <Text style={styles.settingsLabel}>Notifications</Text>
+          <View style={styles.settingsLabelRow}>
+            <Ionicons
+              name="notifications-outline"
+              size={18}
+              color={colors.primary}
+            />
+            <Text style={styles.settingsLabel}>Daily Reminders</Text>
+          </View>
           <Switch
-            value={notificationsEnabled}
-            onValueChange={setNotificationsEnabled}
+            value={remindersEnabled}
+            onValueChange={setRemindersEnabled}
             trackColor={{ false: colors.border, true: colors.primary }}
             thumbColor={colors.white}
           />
@@ -206,33 +246,29 @@ const styles = StyleSheet.create({
   },
   identity: {
     alignItems: 'center',
-    gap: spacing['2sm'],
+    gap: spacing.xs,
   },
   avatar: {
     width: 72,
     height: 72,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.primarySurface,
+    borderWidth: borderWidth.thin + 1,
+    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
     color: colors.primary,
     fontFamily: fontFamily.headingExtraBold,
-    fontSize: 30,
+    fontSize: fontSize.xl,
   },
   name: {
     color: colors.text,
     fontFamily: fontFamily.headingExtraBold,
     fontSize: fontSize.xl,
+    marginTop: spacing.xs,
   },
-  levelPill: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing['2sm'] / 2,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primarySurface,
-  },
-  levelPillText: {
+  levelSubtitle: {
     color: colors.primary,
     fontFamily: fontFamily.heading,
     fontSize: fontSize.sm,
@@ -240,11 +276,19 @@ const styles = StyleSheet.create({
   levelProgressCard: {
     gap: spacing['2sm'],
   },
+  levelProgressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   levelProgressLabel: {
-    color: colors.textMuted,
+    color: colors.text,
     fontFamily: fontFamily.bodyMedium,
     fontSize: fontSize.sm,
-    textAlign: 'center',
+  },
+  levelProgressValue: {
+    color: colors.primary,
+    fontFamily: fontFamily.heading,
+    fontSize: fontSize.sm,
   },
   track: {
     height: 8,
@@ -266,13 +310,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.md,
     borderRadius: borderRadius.lg,
-    backgroundColor: colors.primarySurface,
-    gap: 2,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: borderWidth.thin,
+    borderColor: colors.border,
+    gap: 4,
   },
   statValue: {
-    color: colors.primary,
+    color: colors.text,
     fontFamily: fontFamily.headingExtraBold,
-    fontSize: fontSize.lg,
+    fontSize: fontSize.base,
   },
   statLabel: {
     color: colors.textMuted,
@@ -281,7 +327,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: colors.text,
-    fontFamily: fontFamily.heading,
+    fontFamily: fontFamily.headingExtraBold,
     fontSize: fontSize.lg,
   },
   badgeGrid: {
@@ -293,36 +339,48 @@ const styles = StyleSheet.create({
     width: '31%',
     alignItems: 'center',
     paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xs,
     borderRadius: borderRadius.lg,
-    backgroundColor: colors.accentSurface,
-    gap: spacing['2sm'],
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: borderWidth.thin,
+    borderColor: colors.border,
+    gap: 4,
   },
-  badgeCardLocked: {
-    backgroundColor: colors.border,
-    opacity: 0.6,
-  },
-  badgeIcon: {
-    width: 40,
-    height: 40,
+  badgeIconWrap: {
+    width: 44,
+    height: 44,
     borderRadius: borderRadius.full,
+    backgroundColor: colors.primarySurface,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badgeIconUnlocked: {
-    backgroundColor: colors.accent,
-  },
-  badgeIconLocked: {
+  badgeLockBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 18,
+    height: 18,
+    borderRadius: borderRadius.full,
     backgroundColor: colors.textMuted,
-    opacity: 0.4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.surfaceElevated,
   },
-  badgeLabel: {
+  badgeName: {
     color: colors.text,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.bodySemibold,
     fontSize: fontSize.xs,
     textAlign: 'center',
   },
-  badgeLabelLocked: {
+  badgeNameLocked: {
     color: colors.textMuted,
+  },
+  badgeDescription: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.body,
+    fontSize: 10,
+    textAlign: 'center',
   },
   settingsRow: {
     flexDirection: 'row',
@@ -332,6 +390,11 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     borderWidth: borderWidth.thin,
     borderColor: colors.border,
+  },
+  settingsLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing['2sm'],
   },
   settingsLabel: {
     color: colors.text,
