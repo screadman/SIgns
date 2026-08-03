@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LearningBottomNav } from '../../components/ui';
-import { LEARNING_MODULES, type Lesson } from '../../constants/learning';
+import { LEARNING_MODULES } from '../../constants/learning';
 import {
   borderRadius,
   borderWidth,
@@ -24,7 +24,16 @@ import {
   opacity,
   spacing,
 } from '../../constants/theme';
-import { generateQuizPreset } from '../../lib/dailyQuiz';
+import {
+  generateQuizPreset,
+  getFocusModuleId,
+} from '../../lib/dailyQuiz';
+import {
+  completeDailyQuizSession,
+  isPracticeDayToday,
+} from '../../lib/dailyQuizStorage';
+import { saveLastMissedLessonIds } from '../../lib/missedSigns';
+import { getOnboardingProfile } from '../../lib/onboardingStorage';
 import {
   getQuizStars,
   getQuizXp,
@@ -36,12 +45,9 @@ import {
   lessonHasSignImage,
 } from '../../lib/signImages';
 import { recordSignAnswers } from '../../lib/signStrength';
+import { getNextLesson } from '../../lib/storage';
 
 const ALL_LESSONS = LEARNING_MODULES.flatMap((module) => module.lessons);
-
-function getParam(value: string | string[] | undefined): string {
-  return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
-}
 
 type AnswerState = 'default' | 'correct' | 'incorrect';
 
@@ -52,7 +58,7 @@ function AnswerButton({
   disabled,
   onPress,
 }: {
-  lesson: Lesson;
+  lesson: (typeof ALL_LESSONS)[number];
   format: QuizFormat;
   state: AnswerState;
   disabled: boolean;
@@ -113,45 +119,53 @@ function AnswerButton({
   );
 }
 
-export default function QuizScreen() {
+export default function DailyQuizScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{
-    lessonId?: string | string[];
-    retry?: string | string[];
-  }>();
-  const lessonId = getParam(params.lessonId);
-  const retryKey = getParam(params.retry);
-
   const [questions, setQuestions] = useState<QuizQuestion[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [selectedAnswerId, setSelectedAnswerId] = useState<string | null>(null);
   const [isFinishing, setIsFinishing] = useState(false);
-  const answerLog = useRef<
-    Array<{ signId: string; correct: boolean; lessonId: string }>
-  >([]);
+  const answerLog = useRef<Array<{ signId: string; correct: boolean; lessonId: string }>>(
+    [],
+  );
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let active = true;
-    setQuestions(null);
-    setCurrentQuestionIndex(0);
-    setScore(0);
-    setLives(3);
-    setSelectedAnswerId(null);
-    setIsFinishing(false);
-    answerLog.current = [];
 
     async function load() {
-      const built = await generateQuizPreset({
-        preset: 'module',
-        allLessons: ALL_LESSONS,
-        lessonId,
-      });
+      try {
+        const [profile, nextLesson] = await Promise.all([
+          getOnboardingProfile(),
+          getNextLesson(),
+        ]);
 
-      if (active) {
+        const built = await generateQuizPreset({
+          preset: 'daily',
+          allLessons: ALL_LESSONS,
+          dailyMinutes: profile?.dailyMinutes ?? 5,
+          focusModuleId: getFocusModuleId(nextLesson),
+        });
+
+        if (!active) {
+          return;
+        }
+
+        if (built.length < 4) {
+          setLoadError(true);
+          setQuestions([]);
+          return;
+        }
+
         setQuestions(built);
+      } catch {
+        if (active) {
+          setLoadError(true);
+          setQuestions([]);
+        }
       }
     }
 
@@ -163,7 +177,7 @@ export default function QuizScreen() {
         clearTimeout(advanceTimer.current);
       }
     };
-  }, [lessonId, retryKey]);
+  }, []);
 
   const currentQuestion = questions?.[currentQuestionIndex];
 
@@ -174,6 +188,10 @@ export default function QuizScreen() {
 
     setIsFinishing(true);
 
+    const missedLessonIds = answerLog.current
+      .filter((entry) => !entry.correct)
+      .map((entry) => entry.lessonId);
+
     await recordSignAnswers(
       answerLog.current.map((entry) => ({
         signId: entry.signId,
@@ -181,23 +199,28 @@ export default function QuizScreen() {
       })),
     );
 
+    const profile = await getOnboardingProfile();
+    await completeDailyQuizSession({
+      score: finalScore,
+      missedLessonIds,
+      secureStreak: isPracticeDayToday(profile?.practiceDays),
+    });
+    await saveLastMissedLessonIds(missedLessonIds);
+
     const earnedStars = getQuizStars(finalScore, questions.length);
     const earnedXp = getQuizXp(finalScore, questions.length);
-    const resultId = `${lessonId}-${Date.now()}`;
-    const missedLessonIds = answerLog.current
-      .filter((entry) => !entry.correct)
-      .map((entry) => entry.lessonId);
+    const resultId = `daily-${Date.now()}`;
 
     router.replace({
       pathname: '/quiz/results',
       params: {
-        lessonId,
+        lessonId: `daily-${new Date().toISOString().slice(0, 10)}`,
         score: String(finalScore),
         total: String(questions.length),
         xp: String(earnedXp),
         stars: String(earnedStars),
         resultId,
-        source: 'module',
+        source: 'daily',
         missed: missedLessonIds.join(','),
       },
     } as Href);
@@ -227,14 +250,11 @@ export default function QuizScreen() {
     }
 
     advanceTimer.current = setTimeout(() => {
-      const isLastQuestion = currentQuestionIndex === questions.length - 1;
-      const outOfLives = nextLives <= 0;
-
-      if (isLastQuestion || outOfLives) {
+      const isLast = currentQuestionIndex === questions.length - 1;
+      if (isLast || nextLives <= 0) {
         void finishQuiz(nextScore);
         return;
       }
-
       setCurrentQuestionIndex((index) => index + 1);
       setSelectedAnswerId(null);
     }, isCorrect ? 900 : 1200);
@@ -245,18 +265,25 @@ export default function QuizScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.notFound}>
           <ActivityIndicator color={colors.primary} />
+          <Text style={styles.loadingText}>Building today’s quiz…</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  if (!currentQuestion) {
+  if (loadError || !currentQuestion) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.notFound}>
-          <Text style={styles.notFoundTitle}>Quiz unavailable</Text>
-          <Pressable onPress={() => router.back()} style={styles.backLink}>
-            <Text style={styles.backLinkText}>Back to lesson</Text>
+          <Text style={styles.notFoundTitle}>Daily quiz unavailable</Text>
+          <Text style={styles.notFoundBody}>
+            Need at least 4 illustrated signs. Start with Alphabet.
+          </Text>
+          <Pressable
+            onPress={() => router.replace('/module/alphabet' as Href)}
+            style={styles.backLink}
+          >
+            <Text style={styles.backLinkText}>Open Alphabet</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -276,14 +303,13 @@ export default function QuizScreen() {
       <View style={styles.screen}>
         <View style={styles.header}>
           <View style={styles.quizHeading}>
-            <Text style={styles.title}>Quiz</Text>
+            <Text style={styles.title}>Daily Quiz</Text>
             <View style={styles.questionBadge}>
               <Text style={styles.questionBadgeText}>
                 Q {currentQuestionIndex + 1}/{questions.length}
               </Text>
             </View>
           </View>
-
           <View style={styles.hearts} accessibilityLabel={`${lives} lives left`}>
             {[0, 1, 2].map((heart) => (
               <Ionicons
@@ -536,10 +562,21 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     gap: spacing.sm,
   },
+  loadingText: {
+    marginTop: spacing.md,
+    color: colors.textMuted,
+    fontFamily: fontFamily.body,
+  },
   notFoundTitle: {
     color: colors.text,
     fontFamily: fontFamily.heading,
     fontSize: fontSize.xl,
+  },
+  notFoundBody: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.base,
+    textAlign: 'center',
   },
   backLink: {
     marginTop: spacing.md,

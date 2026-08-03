@@ -22,7 +22,11 @@ import {
   spacing,
 } from '../../constants/theme';
 import { getLevel } from '../../lib/levels';
-import { getOnboardingProfile } from '../../lib/onboardingStorage';
+import {
+  getOnboardingProfile,
+  getReminderSettings,
+  updateReminderSettings,
+} from '../../lib/onboardingStorage';
 import {
   calculateStreak,
   getCompletedLessons,
@@ -63,21 +67,23 @@ type ProfileData = {
 export default function ProfileScreen() {
   const [data, setData] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  // Local UI state only for now. No push permission / scheduler wired yet.
+  // Push-ready: persisted settings. Native scheduling comes in Phase 5.
   const [remindersEnabled, setRemindersEnabled] = useState(true);
+  const [reminderTime, setReminderTime] = useState('18:30');
 
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
 
       async function loadProfile() {
-        const [xp, streak, completedLessonIds, unlockedBadges, onboarding] =
+        const [xp, streak, completedLessonIds, unlockedBadges, onboarding, reminder] =
           await Promise.all([
             getTotalXP(),
             calculateStreak(),
             getCompletedLessons(),
             getUnlockedBadges(),
             getOnboardingProfile(),
+            getReminderSettings(),
           ]);
 
         if (isActive) {
@@ -88,7 +94,8 @@ export default function ProfileScreen() {
             lessonsCompleted: completedLessonIds.length,
             unlockedBadges,
           });
-          setRemindersEnabled(onboarding?.notificationsOptIn ?? true);
+          setRemindersEnabled(reminder.enabled);
+          setReminderTime(reminder.timeLocal);
           setIsLoading(false);
         }
       }
@@ -219,11 +226,19 @@ export default function ProfileScreen() {
               size={18}
               color={colors.primary}
             />
-            <Text style={styles.settingsLabel}>Daily Reminders</Text>
+            <View>
+              <Text style={styles.settingsLabel}>Daily Reminders</Text>
+              <Text style={styles.settingsHint}>
+                Planned for {reminderTime} on practice days
+              </Text>
+            </View>
           </View>
           <Switch
             value={remindersEnabled}
-            onValueChange={setRemindersEnabled}
+            onValueChange={(value) => {
+              setRemindersEnabled(value);
+              void updateReminderSettings({ enabled: value });
+            }}
             trackColor={{ false: colors.border, true: colors.primary }}
             thumbColor={colors.white}
           />
@@ -400,5 +415,11 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontFamily: fontFamily.bodyMedium,
     fontSize: fontSize.base,
+  },
+  settingsHint: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.xs,
+    marginTop: 2,
   },
 });

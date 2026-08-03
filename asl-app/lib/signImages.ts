@@ -1,20 +1,19 @@
 import type { ImageSourcePropType } from 'react-native';
 
 import { LETTER_IMAGES } from '../constants/aslLetterImages';
+import { MODULE_IMAGES } from '../constants/aslModuleImages';
 import { NUMBER_IMAGES } from '../constants/aslNumberImages';
 import { hasMediaAsset, toImageSource } from '../constants/aslLetters';
 import type { Lesson } from '../constants/learning';
-
-function isImageModule(
-  moduleId: string | undefined,
-): moduleId is 'alphabet' | 'numbers' {
-  return moduleId === 'alphabet' || moduleId === 'numbers';
-}
 
 export function peekSignImage(
   moduleId: string | undefined,
   signId: string,
 ): ImageSourcePropType | undefined {
+  if (!moduleId) {
+    return undefined;
+  }
+
   if (moduleId === 'alphabet') {
     return LETTER_IMAGES[signId];
   }
@@ -23,7 +22,7 @@ export function peekSignImage(
     return NUMBER_IMAGES[signId];
   }
 
-  return undefined;
+  return MODULE_IMAGES[moduleId]?.[signId];
 }
 
 export function getLessonImageSource(
@@ -44,7 +43,7 @@ export function lessonHasSignImage(
     return true;
   }
 
-  return isImageModule(lesson.moduleId);
+  return peekSignImage(lesson.moduleId, lesson.sign.id) !== undefined;
 }
 
 /** Kept for call sites that warm a category before navigation. Now a no-op sync hit. */

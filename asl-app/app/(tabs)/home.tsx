@@ -23,7 +23,13 @@ import {
   lineHeight,
   spacing,
 } from '../../constants/theme';
-import { getLevel } from '../../lib/levels';
+import {
+  getHomeDailyCard,
+  type HomeDailyCard,
+  type HomeDailyCtaAction,
+} from '../../lib/homeDaily';
+import { getLearnerName } from '../../lib/onboardingStorage';
+import { getLessonImageSource } from '../../lib/signImages';
 import {
   calculateStreak,
   getCompletedLessons,
@@ -33,7 +39,6 @@ import {
   type DailyChallengeProgress,
 } from '../../lib/storage';
 
-const DAILY_QUIZ_GOAL = 2;
 const PREVIEW_MODULE_COUNT = 3;
 
 type HomeData = {
@@ -42,16 +47,22 @@ type HomeData = {
   nextLesson: Lesson | null;
   dailyProgress: DailyChallengeProgress;
   completedLessonIds: string[];
+  dailyCard: HomeDailyCard;
+  learnerInitials: string;
 };
 
-function headline(streak: number, allCaughtUp: boolean): string {
-  if (allCaughtUp) {
-    return "You've finished every lesson! 🎉";
+function initialsFromName(name: string | null): string {
+  if (!name) {
+    return 'SG';
   }
-  if (streak >= 1) {
-    return 'Great streak! Keep it up! 🔥';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) {
+    return 'SG';
   }
-  return 'Ready to learn today?';
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
 }
 
 export default function HomeScreen() {
@@ -64,17 +75,34 @@ export default function HomeScreen() {
       let isActive = true;
 
       async function loadHome() {
-        const [xp, streak, nextLesson, dailyProgress, completedLessonIds] =
-          await Promise.all([
-            getTotalXP(),
-            calculateStreak(),
-            getNextLesson(),
-            getDailyChallengeProgress(),
-            getCompletedLessons(),
-          ]);
+        const [
+          xp,
+          streak,
+          nextLesson,
+          dailyProgress,
+          completedLessonIds,
+          dailyCard,
+          learnerName,
+        ] = await Promise.all([
+          getTotalXP(),
+          calculateStreak(),
+          getNextLesson(),
+          getDailyChallengeProgress(),
+          getCompletedLessons(),
+          getHomeDailyCard(),
+          getLearnerName(),
+        ]);
 
         if (isActive) {
-          setData({ xp, streak, nextLesson, dailyProgress, completedLessonIds });
+          setData({
+            xp,
+            streak,
+            nextLesson,
+            dailyProgress,
+            completedLessonIds,
+            dailyCard,
+            learnerInitials: initialsFromName(learnerName),
+          });
           setIsLoading(false);
         }
       }
@@ -92,10 +120,39 @@ export default function HomeScreen() {
     [],
   );
 
-  const dailyGoalCount = data?.dailyProgress.quizzesFinished ?? 0;
-  const dailyGoalPercent = Math.round(
-    Math.min(1, dailyGoalCount / DAILY_QUIZ_GOAL) * 100,
-  );
+  function runDailyCta(action: HomeDailyCtaAction) {
+    if (!data) {
+      return;
+    }
+
+    switch (action) {
+      case 'daily':
+        router.push('/quiz/daily' as Href);
+        break;
+      case 'alphabet':
+        router.push('/module/alphabet' as Href);
+        break;
+      case 'missed':
+        router.push({
+          pathname: '/practice/flashcards/[moduleId]',
+          params: { moduleId: 'alphabet', missed: '1' },
+        } as Href);
+        break;
+      case 'missed_quiz':
+        router.push('/quiz/missed' as Href);
+        break;
+      case 'next_lesson':
+        if (data.nextLesson) {
+          router.push(`/lesson/${data.nextLesson.id}` as Href);
+        } else {
+          router.push('/(tabs)/learn' as Href);
+        }
+        break;
+      case 'none':
+      default:
+        break;
+    }
+  }
 
   if (isLoading || !data) {
     return (
@@ -106,6 +163,11 @@ export default function HomeScreen() {
       </SafeAreaView>
     );
   }
+
+  const { dailyCard } = data;
+  const dailyDone = dailyCard.state === 'done';
+  const challengeQuizzes = data.dailyProgress.quizzesFinished;
+  const challengeCorrect = data.dailyProgress.correctAnswers;
 
   const nextLessonModule = data.nextLesson
     ? LEARNING_MODULES.find((m) => m.id === data.nextLesson!.moduleId)
@@ -118,6 +180,16 @@ export default function HomeScreen() {
   const nextLessonModuleProgress = nextLessonModule
     ? nextLessonModuleCompleted / nextLessonModule.lessons.length
     : 0;
+  const nextLessonImage = data.nextLesson
+    ? getLessonImageSource(data.nextLesson)
+    : undefined;
+
+  const primaryAccent =
+    dailyCard.state === 'done'
+      ? colors.success
+      : dailyCard.state === 'off_day'
+        ? colors.textMuted
+        : colors.primary;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -128,7 +200,7 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.identityRow}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>SA</Text>
+              <Text style={styles.avatarText}>{data.learnerInitials}</Text>
             </View>
             <View style={styles.streakPill}>
               <Ionicons name="flame" size={14} color={colors.accent} />
@@ -140,9 +212,75 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <Text style={styles.headline}>
-          {headline(data.streak, data.nextLesson === null)}
-        </Text>
+        <Text style={styles.headline}>{dailyCard.headline}</Text>
+
+        <View
+          style={[
+            styles.dailyCard,
+            dailyDone && styles.dailyCardDone,
+            dailyCard.state === 'blocked' && styles.dailyCardBlocked,
+          ]}
+        >
+          <View style={styles.dailyHeaderRow}>
+            <View
+              style={[
+                styles.dailyIcon,
+                { backgroundColor: `${primaryAccent}22` },
+              ]}
+            >
+              <Ionicons
+                name={
+                  dailyCard.state === 'done'
+                    ? 'checkmark-circle'
+                    : dailyCard.state === 'off_day'
+                      ? 'moon-outline'
+                      : dailyCard.state === 'blocked'
+                        ? 'lock-closed-outline'
+                        : 'flash'
+                }
+                size={22}
+                color={primaryAccent}
+              />
+            </View>
+            <View style={styles.dailyTextCol}>
+              <Text style={styles.dailyLabel}>DAILY QUIZ</Text>
+              <Text style={styles.dailyTitle}>{dailyCard.title}</Text>
+              <Text style={styles.dailySubtitle}>{dailyCard.subtitle}</Text>
+            </View>
+          </View>
+
+          {dailyCard.ctaAction !== 'none' ? (
+            <Pressable
+              style={[
+                styles.dailyCta,
+                dailyCard.state === 'off_day' && styles.dailyCtaMuted,
+              ]}
+              onPress={() => runDailyCta(dailyCard.ctaAction)}
+              accessibilityRole="button"
+              accessibilityLabel={dailyCard.ctaLabel}
+            >
+              <Text style={styles.dailyCtaText}>{dailyCard.ctaLabel}</Text>
+              <Ionicons name="arrow-forward" size={16} color={colors.white} />
+            </Pressable>
+          ) : (
+            <View style={styles.dailyCtaDone}>
+              <Text style={styles.dailyCtaDoneText}>{dailyCard.ctaLabel}</Text>
+            </View>
+          )}
+
+          {dailyCard.secondaryCtaLabel && dailyCard.secondaryCtaAction ? (
+            <Pressable
+              onPress={() => runDailyCta(dailyCard.secondaryCtaAction!)}
+              accessibilityRole="button"
+              accessibilityLabel={dailyCard.secondaryCtaLabel}
+              style={styles.secondaryLink}
+            >
+              <Text style={styles.secondaryLinkText}>
+                {dailyCard.secondaryCtaLabel}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
 
         {data.nextLesson && nextLessonModule ? (
           <Pressable
@@ -154,9 +292,9 @@ export default function HomeScreen() {
             accessibilityLabel={`Continue lesson: ${data.nextLesson.title}`}
           >
             <View style={styles.continueThumb}>
-              {data.nextLesson.sign.image ? (
+              {nextLessonImage ? (
                 <Image
-                  source={data.nextLesson.sign.image}
+                  source={nextLessonImage}
                   style={styles.continueThumbImage}
                   resizeMode="cover"
                 />
@@ -189,20 +327,35 @@ export default function HomeScreen() {
         ) : (
           <View style={styles.continueCardDone}>
             <Text style={styles.continueDoneText}>
-              You're all caught up! Browse the dictionary to keep practicing.
+              You&apos;re all caught up on lessons. Keep sharpening with Daily
+              Quiz.
             </Text>
           </View>
         )}
 
         <View style={styles.progressCard}>
-          <View style={styles.progressRing}>
-            <Text style={styles.progressRingText}>{dailyGoalPercent}%</Text>
+          <View
+            style={[
+              styles.progressRing,
+              dailyDone && { borderColor: colors.success },
+            ]}
+          >
+            <Ionicons
+              name={dailyDone ? 'checkmark' : 'ellipse-outline'}
+              size={22}
+              color={dailyDone ? colors.success : colors.primary}
+            />
           </View>
           <View style={styles.progressTextCol}>
             <Text style={styles.progressTitle}>Today&apos;s progress</Text>
             <Text style={styles.progressSubtitle}>
-              Complete {DAILY_QUIZ_GOAL} lessons today ({dailyGoalCount}/
-              {DAILY_QUIZ_GOAL} done)
+              {dailyDone
+                ? `Daily done · ${challengeQuizzes} ${challengeQuizzes === 1 ? 'quiz' : 'quizzes'} · ${challengeCorrect} correct`
+                : dailyCard.state === 'pending'
+                  ? `Daily pending · ${challengeCorrect} correct answers so far`
+                  : dailyCard.state === 'off_day'
+                    ? `Rest day · ${challengeCorrect} correct answers today`
+                    : 'Unlock more signs to start your Daily.'}
             </Text>
           </View>
         </View>
@@ -325,6 +478,93 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.headingExtraBold,
     fontSize: fontSize.xl,
   },
+  dailyCard: {
+    gap: spacing.md,
+    padding: spacing.lg,
+    borderRadius: borderRadius.xl,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: borderWidth.thin + 1,
+    borderColor: colors.primary,
+  },
+  dailyCardDone: {
+    borderColor: colors.success,
+    backgroundColor: colors.primarySurface,
+  },
+  dailyCardBlocked: {
+    borderColor: colors.border,
+  },
+  dailyHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  dailyIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dailyTextCol: {
+    flex: 1,
+    gap: 4,
+  },
+  dailyLabel: {
+    color: colors.primary,
+    fontFamily: fontFamily.heading,
+    fontSize: fontSize.xs,
+  },
+  dailyTitle: {
+    color: colors.text,
+    fontFamily: fontFamily.headingExtraBold,
+    fontSize: fontSize.lg,
+  },
+  dailySubtitle: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: fontSize.sm,
+    lineHeight: lineHeight.sm,
+  },
+  dailyCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing['2sm'],
+    minHeight: 48,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+  },
+  dailyCtaMuted: {
+    backgroundColor: colors.text,
+  },
+  dailyCtaText: {
+    color: colors.white,
+    fontFamily: fontFamily.heading,
+    fontSize: fontSize.base,
+  },
+  dailyCtaDone: {
+    minHeight: 48,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.success,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  dailyCtaDoneText: {
+    color: colors.white,
+    fontFamily: fontFamily.heading,
+    fontSize: fontSize.base,
+  },
+  secondaryLink: {
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  secondaryLinkText: {
+    color: colors.primary,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: fontSize.sm,
+  },
   continueCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -353,22 +593,24 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   continueLabel: {
-    color: colors.primary,
+    color: colors.textMuted,
     fontFamily: fontFamily.heading,
     fontSize: fontSize.xs,
   },
   continueTitle: {
     color: colors.text,
     fontFamily: fontFamily.headingExtraBold,
-    fontSize: fontSize.lg,
+    fontSize: fontSize.base,
   },
   continueCardDone: {
     borderRadius: borderRadius.xl,
-    backgroundColor: colors.primarySurface,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: borderWidth.thin,
+    borderColor: colors.border,
     padding: spacing.lg,
   },
   continueDoneText: {
-    color: colors.primary,
+    color: colors.textMuted,
     fontFamily: fontFamily.bodyMedium,
     fontSize: fontSize.sm,
     lineHeight: lineHeight.sm,
@@ -391,11 +633,6 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  progressRingText: {
-    color: colors.primary,
-    fontFamily: fontFamily.heading,
-    fontSize: fontSize.xs,
   },
   progressTextCol: {
     flex: 1,

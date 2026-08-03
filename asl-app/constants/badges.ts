@@ -1,13 +1,22 @@
 import type { ComponentProps } from 'react';
 import type { Ionicons } from '@expo/vector-icons';
 
-export type BadgeId =
+import {
+  LEARNING_MODULES,
+  type LearningModuleId,
+} from './learning';
+
+export type CoreBadgeId =
   | 'first-sign'
   | 'perfect-score'
   | 'alphabet-ace'
   | 'number-pro'
   | 'on-fire'
   | 'rising-star';
+
+export type BossBadgeId = `boss-${LearningModuleId}`;
+
+export type BadgeId = CoreBadgeId | BossBadgeId;
 
 export type BadgeDefinition = {
   id: BadgeId;
@@ -16,7 +25,7 @@ export type BadgeDefinition = {
   icon: ComponentProps<typeof Ionicons>['name'];
 };
 
-export const BADGES: BadgeDefinition[] = [
+export const CORE_BADGES: BadgeDefinition[] = [
   {
     id: 'first-sign',
     name: 'First Sign',
@@ -55,6 +64,25 @@ export const BADGES: BadgeDefinition[] = [
   },
 ];
 
+export const BOSS_BADGES: BadgeDefinition[] = LEARNING_MODULES.map(
+  (module) => ({
+    id: `boss-${module.id}` as BossBadgeId,
+    name: `${module.title} Boss`,
+    description: `Perfect the ${module.title} Boss quiz (no mistakes).`,
+    icon: 'ribbon-outline' as const,
+  }),
+);
+
+export const BADGES: BadgeDefinition[] = [...CORE_BADGES, ...BOSS_BADGES];
+
 export const BADGES_BY_ID = Object.fromEntries(
   BADGES.map((badge) => [badge.id, badge]),
 ) as Record<BadgeId, BadgeDefinition>;
+
+export function bossBadgeId(moduleId: LearningModuleId): BossBadgeId {
+  return `boss-${moduleId}`;
+}
+
+export function isBossBadgeId(id: string): id is BossBadgeId {
+  return id.startsWith('boss-');
+}

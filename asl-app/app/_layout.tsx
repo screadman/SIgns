@@ -67,6 +67,26 @@ export default function RootLayout() {
           options={{ animation: 'slide_from_right' }}
         />
         <Stack.Screen
+          name="practice/flashcards/[moduleId]"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="practice/matching/[moduleId]"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="quiz/daily"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="quiz/missed"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="quiz/boss/[moduleId]"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
           name="quiz/[lessonId]"
           options={{ animation: 'slide_from_right' }}
         />

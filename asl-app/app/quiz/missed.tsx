@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LearningBottomNav } from '../../components/ui';
-import { LEARNING_MODULES, type Lesson } from '../../constants/learning';
+import { LEARNING_MODULES } from '../../constants/learning';
 import {
   borderRadius,
   borderWidth,
@@ -24,7 +24,10 @@ import {
   opacity,
   spacing,
 } from '../../constants/theme';
-import { generateQuizPreset } from '../../lib/dailyQuiz';
+import {
+  generateQuizPreset,
+} from '../../lib/dailyQuiz';
+import { saveLastMissedLessonIds } from '../../lib/missedSigns';
 import {
   getQuizStars,
   getQuizXp,
@@ -39,10 +42,6 @@ import { recordSignAnswers } from '../../lib/signStrength';
 
 const ALL_LESSONS = LEARNING_MODULES.flatMap((module) => module.lessons);
 
-function getParam(value: string | string[] | undefined): string {
-  return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
-}
-
 type AnswerState = 'default' | 'correct' | 'incorrect';
 
 function AnswerButton({
@@ -52,7 +51,7 @@ function AnswerButton({
   disabled,
   onPress,
 }: {
-  lesson: Lesson;
+  lesson: (typeof ALL_LESSONS)[number];
   format: QuizFormat;
   state: AnswerState;
   disabled: boolean;
@@ -113,16 +112,10 @@ function AnswerButton({
   );
 }
 
-export default function QuizScreen() {
+export default function MissedQuizScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{
-    lessonId?: string | string[];
-    retry?: string | string[];
-  }>();
-  const lessonId = getParam(params.lessonId);
-  const retryKey = getParam(params.retry);
-
   const [questions, setQuestions] = useState<QuizQuestion[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
@@ -135,23 +128,30 @@ export default function QuizScreen() {
 
   useEffect(() => {
     let active = true;
-    setQuestions(null);
-    setCurrentQuestionIndex(0);
-    setScore(0);
-    setLives(3);
-    setSelectedAnswerId(null);
-    setIsFinishing(false);
-    answerLog.current = [];
 
     async function load() {
-      const built = await generateQuizPreset({
-        preset: 'module',
-        allLessons: ALL_LESSONS,
-        lessonId,
-      });
+      try {
+        const built = await generateQuizPreset({
+          preset: 'missed',
+          allLessons: ALL_LESSONS,
+        });
 
-      if (active) {
+        if (!active) {
+          return;
+        }
+
+        if (built.length === 0) {
+          setLoadError(true);
+          setQuestions([]);
+          return;
+        }
+
         setQuestions(built);
+      } catch {
+        if (active) {
+          setLoadError(true);
+          setQuestions([]);
+        }
       }
     }
 
@@ -163,7 +163,7 @@ export default function QuizScreen() {
         clearTimeout(advanceTimer.current);
       }
     };
-  }, [lessonId, retryKey]);
+  }, []);
 
   const currentQuestion = questions?.[currentQuestionIndex];
 
@@ -174,19 +174,22 @@ export default function QuizScreen() {
 
     setIsFinishing(true);
 
+    const missedLessonIds = answerLog.current
+      .filter((entry) => !entry.correct)
+      .map((entry) => entry.lessonId);
+
     await recordSignAnswers(
       answerLog.current.map((entry) => ({
         signId: entry.signId,
         correct: entry.correct,
       })),
     );
+    await saveLastMissedLessonIds(missedLessonIds);
 
     const earnedStars = getQuizStars(finalScore, questions.length);
     const earnedXp = getQuizXp(finalScore, questions.length);
-    const resultId = `${lessonId}-${Date.now()}`;
-    const missedLessonIds = answerLog.current
-      .filter((entry) => !entry.correct)
-      .map((entry) => entry.lessonId);
+    const resultId = `missed-${Date.now()}`;
+    const lessonId = `missed-${new Date().toISOString().slice(0, 10)}`;
 
     router.replace({
       pathname: '/quiz/results',
@@ -197,7 +200,7 @@ export default function QuizScreen() {
         xp: String(earnedXp),
         stars: String(earnedStars),
         resultId,
-        source: 'module',
+        source: 'missed',
         missed: missedLessonIds.join(','),
       },
     } as Href);
@@ -227,14 +230,11 @@ export default function QuizScreen() {
     }
 
     advanceTimer.current = setTimeout(() => {
-      const isLastQuestion = currentQuestionIndex === questions.length - 1;
-      const outOfLives = nextLives <= 0;
-
-      if (isLastQuestion || outOfLives) {
+      const isLast = currentQuestionIndex === questions.length - 1;
+      if (isLast || nextLives <= 0) {
         void finishQuiz(nextScore);
         return;
       }
-
       setCurrentQuestionIndex((index) => index + 1);
       setSelectedAnswerId(null);
     }, isCorrect ? 900 : 1200);
@@ -245,18 +245,36 @@ export default function QuizScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.notFound}>
           <ActivityIndicator color={colors.primary} />
+          <Text style={styles.loadingText}>Building missed quiz…</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  if (!currentQuestion) {
+  if (loadError || !currentQuestion) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.notFound}>
-          <Text style={styles.notFoundTitle}>Quiz unavailable</Text>
-          <Pressable onPress={() => router.back()} style={styles.backLink}>
-            <Text style={styles.backLinkText}>Back to lesson</Text>
+          <Text style={styles.notFoundTitle}>No missed signs yet</Text>
+          <Text style={styles.notFoundBody}>
+            Miss a few in Daily Quiz, then come back to drill them.
+          </Text>
+          <Pressable
+            onPress={() =>
+              router.replace({
+                pathname: '/practice/flashcards/[moduleId]',
+                params: { moduleId: 'alphabet', missed: '1' },
+              } as Href)
+            }
+            style={styles.backLink}
+          >
+            <Text style={styles.backLinkText}>Open missed flashcards</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.replace('/(tabs)/practice' as Href)}
+            style={styles.backLink}
+          >
+            <Text style={styles.backLinkText}>Back to Practice</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -276,14 +294,13 @@ export default function QuizScreen() {
       <View style={styles.screen}>
         <View style={styles.header}>
           <View style={styles.quizHeading}>
-            <Text style={styles.title}>Quiz</Text>
+            <Text style={styles.title}>Missed Quiz</Text>
             <View style={styles.questionBadge}>
               <Text style={styles.questionBadgeText}>
                 Q {currentQuestionIndex + 1}/{questions.length}
               </Text>
             </View>
           </View>
-
           <View style={styles.hearts} accessibilityLabel={`${lives} lives left`}>
             {[0, 1, 2].map((heart) => (
               <Ionicons
@@ -536,10 +553,21 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     gap: spacing.sm,
   },
+  loadingText: {
+    marginTop: spacing.md,
+    color: colors.textMuted,
+    fontFamily: fontFamily.body,
+  },
   notFoundTitle: {
     color: colors.text,
     fontFamily: fontFamily.heading,
     fontSize: fontSize.xl,
+  },
+  notFoundBody: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.base,
+    textAlign: 'center',
   },
   backLink: {
     marginTop: spacing.md,

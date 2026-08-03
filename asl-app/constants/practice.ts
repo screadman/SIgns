@@ -67,7 +67,7 @@ export const PRACTICE_MODES: PracticeMode[] = [
     description: 'Flip cards to review meaning and handshape.',
     icon: 'albums-outline',
     tileColor: '#2DD4BF',
-    available: false,
+    available: true,
   },
   {
     id: 'sign-matching',
@@ -75,7 +75,7 @@ export const PRACTICE_MODES: PracticeMode[] = [
     description: 'Match each picture with the right gloss.',
     icon: 'swap-horizontal-outline',
     tileColor: '#60A5FA',
-    available: false,
+    available: true,
   },
   {
     id: 'alphabet-matching',
@@ -83,7 +83,7 @@ export const PRACTICE_MODES: PracticeMode[] = [
     description: 'Pair letters with their ASL handshapes.',
     icon: 'text-outline',
     tileColor: '#FBBF24',
-    available: false,
+    available: true,
   },
   {
     id: 'challenges',

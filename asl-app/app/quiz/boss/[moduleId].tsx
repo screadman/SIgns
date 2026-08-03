@@ -1,5 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  type Href,
+  useLocalSearchParams,
+  useRouter,
+} from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -12,8 +16,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { LearningBottomNav } from '../../components/ui';
-import { LEARNING_MODULES, type Lesson } from '../../constants/learning';
+import { LearningBottomNav } from '../../../components/ui';
+import {
+  LEARNING_MODULES,
+  getLearningModule,
+  type Lesson,
+} from '../../../constants/learning';
 import {
   borderRadius,
   borderWidth,
@@ -23,27 +31,28 @@ import {
   lineHeight,
   opacity,
   spacing,
-} from '../../constants/theme';
-import { generateQuizPreset } from '../../lib/dailyQuiz';
+} from '../../../constants/theme';
+import { generateQuizPreset } from '../../../lib/dailyQuiz';
+import { saveLastMissedLessonIds } from '../../../lib/missedSigns';
 import {
   getQuizStars,
   getQuizXp,
   type QuizFormat,
   type QuizQuestion,
-} from '../../lib/quiz';
+} from '../../../lib/quiz';
 import {
   getLessonImageSource,
   lessonHasSignImage,
-} from '../../lib/signImages';
-import { recordSignAnswers } from '../../lib/signStrength';
+} from '../../../lib/signImages';
+import { recordSignAnswers } from '../../../lib/signStrength';
 
 const ALL_LESSONS = LEARNING_MODULES.flatMap((module) => module.lessons);
+
+type AnswerState = 'default' | 'correct' | 'incorrect';
 
 function getParam(value: string | string[] | undefined): string {
   return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
 }
-
-type AnswerState = 'default' | 'correct' | 'incorrect';
 
 function AnswerButton({
   lesson,
@@ -113,19 +122,16 @@ function AnswerButton({
   );
 }
 
-export default function QuizScreen() {
+export default function BossQuizScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{
-    lessonId?: string | string[];
-    retry?: string | string[];
-  }>();
-  const lessonId = getParam(params.lessonId);
-  const retryKey = getParam(params.retry);
+  const params = useLocalSearchParams<{ moduleId?: string | string[] }>();
+  const moduleId = getParam(params.moduleId);
+  const module = getLearningModule(moduleId);
 
   const [questions, setQuestions] = useState<QuizQuestion[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
-  const [lives, setLives] = useState(3);
   const [selectedAnswerId, setSelectedAnswerId] = useState<string | null>(null);
   const [isFinishing, setIsFinishing] = useState(false);
   const answerLog = useRef<
@@ -135,23 +141,31 @@ export default function QuizScreen() {
 
   useEffect(() => {
     let active = true;
-    setQuestions(null);
-    setCurrentQuestionIndex(0);
-    setScore(0);
-    setLives(3);
-    setSelectedAnswerId(null);
-    setIsFinishing(false);
-    answerLog.current = [];
 
     async function load() {
-      const built = await generateQuizPreset({
-        preset: 'module',
-        allLessons: ALL_LESSONS,
-        lessonId,
-      });
+      try {
+        const built = await generateQuizPreset({
+          preset: 'boss',
+          allLessons: ALL_LESSONS,
+          moduleId,
+        });
 
-      if (active) {
+        if (!active) {
+          return;
+        }
+
+        if (built.length === 0) {
+          setLoadError(true);
+          setQuestions([]);
+          return;
+        }
+
         setQuestions(built);
+      } catch {
+        if (active) {
+          setLoadError(true);
+          setQuestions([]);
+        }
       }
     }
 
@@ -163,7 +177,7 @@ export default function QuizScreen() {
         clearTimeout(advanceTimer.current);
       }
     };
-  }, [lessonId, retryKey]);
+  }, [moduleId]);
 
   const currentQuestion = questions?.[currentQuestionIndex];
 
@@ -174,6 +188,10 @@ export default function QuizScreen() {
 
     setIsFinishing(true);
 
+    const missedLessonIds = answerLog.current
+      .filter((entry) => !entry.correct)
+      .map((entry) => entry.lessonId);
+
     await recordSignAnswers(
       answerLog.current.map((entry) => ({
         signId: entry.signId,
@@ -181,23 +199,25 @@ export default function QuizScreen() {
       })),
     );
 
+    if (missedLessonIds.length > 0) {
+      await saveLastMissedLessonIds(missedLessonIds);
+    }
+
     const earnedStars = getQuizStars(finalScore, questions.length);
-    const earnedXp = getQuizXp(finalScore, questions.length);
-    const resultId = `${lessonId}-${Date.now()}`;
-    const missedLessonIds = answerLog.current
-      .filter((entry) => !entry.correct)
-      .map((entry) => entry.lessonId);
+    const earnedXp = getQuizXp(finalScore, questions.length) + 20;
+    const resultId = `boss-${moduleId}-${Date.now()}`;
 
     router.replace({
       pathname: '/quiz/results',
       params: {
-        lessonId,
+        lessonId: `boss-${moduleId}`,
         score: String(finalScore),
         total: String(questions.length),
         xp: String(earnedXp),
         stars: String(earnedStars),
         resultId,
-        source: 'module',
+        source: 'boss',
+        moduleId,
         missed: missedLessonIds.join(','),
       },
     } as Href);
@@ -220,24 +240,32 @@ export default function QuizScreen() {
     setSelectedAnswerId(answerId);
     setScore(nextScore);
 
-    let nextLives = lives;
-    if (!isCorrect) {
-      nextLives = Math.max(0, lives - 1);
-      setLives(nextLives);
-    }
-
     advanceTimer.current = setTimeout(() => {
-      const isLastQuestion = currentQuestionIndex === questions.length - 1;
-      const outOfLives = nextLives <= 0;
-
-      if (isLastQuestion || outOfLives) {
+      const isLast = currentQuestionIndex === questions.length - 1;
+      // Zero lives: any miss ends the run immediately.
+      if (!isCorrect || isLast) {
         void finishQuiz(nextScore);
         return;
       }
-
       setCurrentQuestionIndex((index) => index + 1);
       setSelectedAnswerId(null);
-    }, isCorrect ? 900 : 1200);
+    }, isCorrect ? 900 : 1400);
+  }
+
+  if (!module) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.notFound}>
+          <Text style={styles.notFoundTitle}>Boss unavailable</Text>
+          <Pressable
+            onPress={() => router.replace('/(tabs)/practice' as Href)}
+            style={styles.backLink}
+          >
+            <Text style={styles.backLinkText}>Back to Practice</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   if (questions === null) {
@@ -245,18 +273,28 @@ export default function QuizScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.notFound}>
           <ActivityIndicator color={colors.primary} />
+          <Text style={styles.loadingText}>
+            Preparing {module.title} Boss…
+          </Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  if (!currentQuestion) {
+  if (loadError || !currentQuestion) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.notFound}>
-          <Text style={styles.notFoundTitle}>Quiz unavailable</Text>
-          <Pressable onPress={() => router.back()} style={styles.backLink}>
-            <Text style={styles.backLinkText}>Back to lesson</Text>
+          <Text style={styles.notFoundTitle}>Boss locked</Text>
+          <Text style={styles.notFoundBody}>
+            Need at least 8 illustrated signs in {module.title}. Keep learning,
+            then come back.
+          </Text>
+          <Pressable
+            onPress={() => router.replace(`/module/${module.id}` as Href)}
+            style={styles.backLink}
+          >
+            <Text style={styles.backLinkText}>Open {module.title}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -276,25 +314,19 @@ export default function QuizScreen() {
       <View style={styles.screen}>
         <View style={styles.header}>
           <View style={styles.quizHeading}>
-            <Text style={styles.title}>Quiz</Text>
+            <Text style={styles.title}>{module.title} Boss</Text>
             <View style={styles.questionBadge}>
               <Text style={styles.questionBadgeText}>
                 Q {currentQuestionIndex + 1}/{questions.length}
               </Text>
             </View>
           </View>
-
-          <View style={styles.hearts} accessibilityLabel={`${lives} lives left`}>
-            {[0, 1, 2].map((heart) => (
-              <Ionicons
-                key={heart}
-                name={heart < lives ? 'heart' : 'heart-outline'}
-                size={22}
-                color={heart < lives ? colors.accent : colors.disabled}
-              />
-            ))}
+          <View style={styles.hearts} accessibilityLabel="No lives. One miss ends the run.">
+            <Ionicons name="skull-outline" size={22} color={colors.accent} />
           </View>
         </View>
+
+        <Text style={styles.rules}>No lives. One miss ends the run.</Text>
 
         <ScrollView
           style={styles.content}
@@ -368,8 +400,8 @@ export default function QuizScreen() {
               ]}
             >
               {selectedIsCorrect
-                ? 'Correct! +10 XP'
-                : currentQuestion.prompt.sign.tip}
+                ? 'Correct!'
+                : `Run over. ${currentQuestion.prompt.sign.tip}`}
             </Text>
           ) : null}
         </ScrollView>
@@ -399,27 +431,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing['2sm'],
+    flexShrink: 1,
   },
   title: {
     color: colors.text,
     fontFamily: fontFamily.headingExtraBold,
     fontSize: fontSize.lg,
     lineHeight: 23,
+    flexShrink: 1,
   },
   questionBadge: {
     paddingHorizontal: 10,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.primarySurface,
+    backgroundColor: colors.accentSurface,
   },
   questionBadgeText: {
-    color: colors.primary,
+    color: colors.accent,
     fontFamily: fontFamily.bodySemibold,
     fontSize: fontSize.xs,
   },
   hearts: {
     flexDirection: 'row',
     gap: spacing.xs,
+  },
+  rules: {
+    paddingHorizontal: spacing.lg,
+    color: colors.accent,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: fontSize.sm,
+    marginBottom: spacing.xs,
   },
   content: {
     flex: 1,
@@ -536,10 +577,21 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     gap: spacing.sm,
   },
+  loadingText: {
+    marginTop: spacing.md,
+    color: colors.textMuted,
+    fontFamily: fontFamily.body,
+  },
   notFoundTitle: {
     color: colors.text,
     fontFamily: fontFamily.heading,
     fontSize: fontSize.xl,
+  },
+  notFoundBody: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.base,
+    textAlign: 'center',
   },
   backLink: {
     marginTop: spacing.md,

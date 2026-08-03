@@ -2,14 +2,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
   BADGES,
+  bossBadgeId,
   type BadgeId,
 } from '../constants/badges';
 import {
   LEARNING_MODULES,
   getLearningModule,
+  type LearningModuleId,
   type Lesson,
 } from '../constants/learning';
+import { DAILY_CHALLENGES } from '../constants/practice';
 import { getLevel } from './levels';
+import { markSignExposed } from './signStrength';
 
 export const COMPLETED_LESSONS_KEY = 'completed_lessons';
 export const STARS_KEY = 'stars';
@@ -24,12 +28,15 @@ export type DailyChallengeProgress = {
   signsLearned: number;
   quizzesFinished: number;
   correctAnswers: number;
+  /** Challenge ids whose XP reward was already granted today. */
+  claimedRewards: string[];
 };
 
 const EMPTY_DAILY_PROGRESS: DailyChallengeProgress = {
   signsLearned: 0,
   quizzesFinished: 0,
   correctAnswers: 0,
+  claimedRewards: [],
 };
 
 export type QuizResultInput = {
@@ -39,6 +46,12 @@ export type QuizResultInput = {
   xp: number;
   stars: number;
   resultId?: string;
+  /**
+   * When true, marks today as an activity day for streak.
+   * Daily Quiz should use completeDailyQuizSession instead.
+   * Module / practice quizzes default to false.
+   */
+  securesStreak?: boolean;
 };
 
 export type QuizResultSnapshot = {
@@ -53,6 +66,8 @@ export type QuizResultSnapshot = {
 export type BadgeCheckContext = {
   score?: number;
   total?: number;
+  source?: 'daily' | 'module' | 'missed' | 'boss';
+  bossModuleId?: LearningModuleId;
 };
 
 function toDayKey(date: Date): string {
@@ -114,6 +129,12 @@ export async function saveCompletedLesson(lessonId: string): Promise<string[]> {
     JSON.stringify(updatedLessons),
   );
   await recordDailyChallengeProgress({ signsLearned: 1 });
+
+  const separator = normalizedLessonId.indexOf('-');
+  if (separator > 0 && separator < normalizedLessonId.length - 1) {
+    const signId = normalizedLessonId.slice(separator + 1);
+    await markSignExposed(signId);
+  }
 
   return updatedLessons;
 }
@@ -199,6 +220,11 @@ export async function getDailyChallengeProgress(): Promise<DailyChallengeProgres
         0,
         Math.floor(Number(record.correctAnswers) || 0),
       ),
+      claimedRewards: Array.isArray(record.claimedRewards)
+        ? record.claimedRewards.filter(
+            (value): value is string => typeof value === 'string',
+          )
+        : [],
     };
   } catch {
     return { ...EMPTY_DAILY_PROGRESS };
@@ -206,7 +232,12 @@ export async function getDailyChallengeProgress(): Promise<DailyChallengeProgres
 }
 
 export async function recordDailyChallengeProgress(
-  delta: Partial<DailyChallengeProgress>,
+  delta: Partial<
+    Pick<
+      DailyChallengeProgress,
+      'signsLearned' | 'quizzesFinished' | 'correctAnswers'
+    >
+  >,
 ): Promise<DailyChallengeProgress> {
   const current = await getDailyChallengeProgress();
   const updated: DailyChallengeProgress = {
@@ -215,7 +246,24 @@ export async function recordDailyChallengeProgress(
       current.quizzesFinished + Math.max(0, delta.quizzesFinished ?? 0),
     correctAnswers:
       current.correctAnswers + Math.max(0, delta.correctAnswers ?? 0),
+    claimedRewards: [...current.claimedRewards],
   };
+
+  let rewardXp = 0;
+
+  for (const challenge of DAILY_CHALLENGES) {
+    const progress = updated[challenge.id];
+    const alreadyClaimed = updated.claimedRewards.includes(challenge.id);
+
+    if (!alreadyClaimed && progress >= challenge.target) {
+      updated.claimedRewards.push(challenge.id);
+      rewardXp += challenge.rewardXp;
+    }
+  }
+
+  if (rewardXp > 0) {
+    await addXP(rewardXp);
+  }
 
   await AsyncStorage.setItem(
     dailyChallengeStorageKey(),
@@ -425,14 +473,22 @@ export async function checkAndUnlockBadges(
     context.total > 0 &&
     context.score >= context.total;
 
-  const conditions: Record<BadgeId, boolean> = {
+  const conditions = {
     'first-sign': completedLessons.length >= 1,
     'perfect-score': hasPerfectScore,
     'alphabet-ace': isModuleFullyComplete('alphabet', completedLessons),
     'number-pro': isModuleFullyComplete('numbers', completedLessons),
     'on-fire': streak >= 3,
     'rising-star': level >= 5,
-  };
+  } as Record<BadgeId, boolean>;
+
+  for (const module of LEARNING_MODULES) {
+    const id = bossBadgeId(module.id);
+    conditions[id] =
+      context.source === 'boss' &&
+      context.bossModuleId === module.id &&
+      hasPerfectScore;
+  }
 
   for (const badge of BADGES) {
     if (unlockedSet.has(badge.id) || !conditions[badge.id]) {
@@ -494,10 +550,19 @@ export async function saveQuizResult(
     return getQuizResultSnapshot();
   }
 
-  await saveCompletedLesson(lessonId);
+  const isSessionResult =
+    lessonId.startsWith('daily-') ||
+    lessonId.startsWith('missed-') ||
+    lessonId.startsWith('boss-');
+
+  if (!isSessionResult) {
+    await saveCompletedLesson(lessonId);
+  }
   await addStars(stars);
   await addXP(xp);
-  await recordActivityToday();
+  if (input.securesStreak) {
+    await recordActivityToday();
+  }
   await recordDailyChallengeProgress({
     quizzesFinished: 1,
     correctAnswers: Math.max(0, Math.floor(input.score)),

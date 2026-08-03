@@ -237,7 +237,6 @@ export default function LessonScreen() {
                   setIsSaving(true);
 
                   try {
-                    await markLearned();
                     router.push(`/quiz/${lesson.id}` as Href);
                   } finally {
                     setIsSaving(false);

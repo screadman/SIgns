@@ -13,6 +13,7 @@ import { LearningBottomNav } from '../../components/ui';
 import {
   LEARNING_MODULES,
   getFirstPracticeLesson,
+  getModuleMediaLessons,
   lessonHasQuizMedia,
   type LearningModule,
 } from '../../constants/learning';
@@ -84,9 +85,11 @@ function QuizModuleRow({
 function ChallengeCard({
   challenge,
   progress,
+  claimed,
 }: {
   challenge: DailyChallengeDef;
   progress: number;
+  claimed: boolean;
 }) {
   const clamped = Math.min(progress, challenge.target);
   const ratio = challenge.target === 0 ? 0 : clamped / challenge.target;
@@ -104,11 +107,13 @@ function ChallengeCard({
         </View>
         <View style={styles.rewardChip}>
           <Ionicons
-            name={complete ? 'checkmark-circle' : 'flash'}
+            name={claimed || complete ? 'checkmark-circle' : 'flash'}
             size={16}
-            color={complete ? colors.success : colors.warning}
+            color={claimed || complete ? colors.success : colors.warning}
           />
-          <Text style={styles.rewardText}>{challenge.rewardXp} XP</Text>
+          <Text style={styles.rewardText}>
+            {claimed ? 'Claimed' : `${challenge.rewardXp} XP`}
+          </Text>
         </View>
       </View>
     </View>
@@ -123,6 +128,7 @@ export default function PracticeModeScreen() {
     signsLearned: 0,
     quizzesFinished: 0,
     correctAnswers: 0,
+    claimedRewards: [],
   });
 
   useFocusEffect(
@@ -142,6 +148,7 @@ export default function PracticeModeScreen() {
               signsLearned: 0,
               quizzesFinished: 0,
               correctAnswers: 0,
+              claimedRewards: [],
             });
           }
         }
@@ -217,6 +224,51 @@ export default function PracticeModeScreen() {
 
           {mode.id === 'quiz' && mode.available ? (
             <>
+              <Text style={styles.sectionTitle}>Daily & review</Text>
+              <View style={styles.list}>
+                <Pressable
+                  onPress={() => router.push('/quiz/daily' as Href)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Daily Quiz"
+                  style={({ pressed }) => [
+                    styles.row,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <View
+                    style={[styles.rowSwatch, { backgroundColor: '#FB7185' }]}
+                  />
+                  <View style={styles.rowCopy}>
+                    <Text style={styles.rowTitle}>Daily Quiz</Text>
+                    <Text style={styles.rowSubtitle}>
+                      Today&apos;s ritual. Secures your streak.
+                    </Text>
+                  </View>
+                  <Ionicons name="flash" size={18} color={colors.text} />
+                </Pressable>
+
+                <Pressable
+                  onPress={() => router.push('/quiz/missed' as Href)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Missed Quiz"
+                  style={({ pressed }) => [
+                    styles.row,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <View
+                    style={[styles.rowSwatch, { backgroundColor: '#F97316' }]}
+                  />
+                  <View style={styles.rowCopy}>
+                    <Text style={styles.rowTitle}>Missed Quiz</Text>
+                    <Text style={styles.rowSubtitle}>
+                      Drill signs you missed in the last 7 days.
+                    </Text>
+                  </View>
+                  <Ionicons name="refresh" size={18} color={colors.text} />
+                </Pressable>
+              </View>
+
               <Text style={styles.sectionTitle}>Choose a collection</Text>
               <View style={styles.list}>
                 {LEARNING_MODULES.map((module) => {
@@ -241,6 +293,127 @@ export default function PracticeModeScreen() {
                   );
                 })}
               </View>
+
+              <Text style={styles.sectionTitle}>Boss challenge</Text>
+              <Text style={styles.sectionHint}>
+                8 to 10 questions. No lives. Perfect clear unlocks a badge.
+              </Text>
+              <View style={styles.list}>
+                {LEARNING_MODULES.map((module) => {
+                  const mediaCount = getModuleMediaLessons(module).length;
+                  const enabled = mediaCount >= 8;
+
+                  return (
+                    <QuizModuleRow
+                      key={`boss-${module.id}`}
+                      module={module}
+                      enabled={enabled}
+                      onPress={() => {
+                        router.push(`/quiz/boss/${module.id}` as Href);
+                      }}
+                    />
+                  );
+                })}
+              </View>
+            </>
+          ) : mode.id === 'flashcards' && mode.available ? (
+            <>
+              <Text style={styles.sectionTitle}>Quick review</Text>
+              <View style={styles.list}>
+                <Pressable
+                  onPress={() =>
+                    router.push({
+                      pathname: '/practice/flashcards/[moduleId]',
+                      params: { moduleId: 'alphabet', missed: '1' },
+                    } as Href)
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel="Missed signs flashcards"
+                  style={({ pressed }) => [
+                    styles.row,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <View
+                    style={[styles.rowSwatch, { backgroundColor: '#F97316' }]}
+                  />
+                  <View style={styles.rowCopy}>
+                    <Text style={styles.rowTitle}>Missed signs</Text>
+                    <Text style={styles.rowSubtitle}>
+                      Flip the signs you got wrong recently.
+                    </Text>
+                  </View>
+                  <Ionicons name="albums-outline" size={18} color={colors.text} />
+                </Pressable>
+              </View>
+
+              <Text style={styles.sectionTitle}>Choose a collection</Text>
+              <View style={styles.list}>
+                {LEARNING_MODULES.map((module) => {
+                  const mediaCount = getModuleMediaLessons(module).length;
+                  const enabled = mediaCount >= 1;
+
+                  return (
+                    <QuizModuleRow
+                      key={module.id}
+                      module={module}
+                      enabled={enabled}
+                      onPress={() => {
+                        router.push(
+                          `/practice/flashcards/${module.id}` as Href,
+                        );
+                      }}
+                    />
+                  );
+                })}
+              </View>
+            </>
+          ) : mode.id === 'sign-matching' && mode.available ? (
+            <>
+              <Text style={styles.sectionTitle}>Choose a collection</Text>
+              <View style={styles.list}>
+                {LEARNING_MODULES.map((module) => {
+                  const mediaCount = getModuleMediaLessons(module).length;
+                  const enabled = mediaCount >= 4;
+
+                  return (
+                    <QuizModuleRow
+                      key={module.id}
+                      module={module}
+                      enabled={enabled}
+                      onPress={() => {
+                        router.push(
+                          `/practice/matching/${module.id}` as Href,
+                        );
+                      }}
+                    />
+                  );
+                })}
+              </View>
+            </>
+          ) : mode.id === 'alphabet-matching' && mode.available ? (
+            <>
+              <Text style={styles.sectionTitle}>Alphabet only</Text>
+              <View style={styles.list}>
+                {LEARNING_MODULES.filter(
+                  (module) => module.id === 'alphabet',
+                ).map((module) => {
+                  const enabled = getModuleMediaLessons(module).length >= 4;
+
+                  return (
+                    <QuizModuleRow
+                      key={module.id}
+                      module={module}
+                      enabled={enabled}
+                      onPress={() => {
+                        router.push(
+                          `/practice/matching/${module.id}` as Href,
+                        );
+                      }}
+                    />
+                  );
+                })}
+              </View>
             </>
           ) : mode.id === 'challenges' && mode.available ? (
             <>
@@ -257,6 +430,9 @@ export default function PracticeModeScreen() {
                     key={challenge.id}
                     challenge={challenge}
                     progress={dailyProgress[challenge.id]}
+                    claimed={dailyProgress.claimedRewards.includes(
+                      challenge.id,
+                    )}
                   />
                 ))}
               </View>
@@ -270,8 +446,7 @@ export default function PracticeModeScreen() {
               />
               <Text style={styles.comingSoonTitle}>Coming soon</Text>
               <Text style={styles.comingSoonBody}>
-                This mode is planned for a later build. Quiz and Challenges are
-                ready to use now.
+                This mode is planned for a later build.
               </Text>
             </View>
           )}
@@ -350,6 +525,13 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodySemibold,
     fontSize: fontSize.base,
     lineHeight: 22,
+  },
+  sectionHint: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.sm,
+    lineHeight: lineHeight.sm,
+    marginTop: -spacing.xs,
   },
   challengeHeader: {
     flexDirection: 'row',
