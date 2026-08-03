@@ -37,14 +37,13 @@ function ModeTile({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${mode.title}. ${mode.description}`}
-      style={({ pressed }) => [
+      style={[
         styles.tile,
         {
           width,
           backgroundColor: mode.tileColor,
         },
-        pressed && styles.pressed,
-      ]}
+            ]}
     >
       <View style={styles.tileIconWrap}>
         <Ionicons name={mode.icon} size={34} color={colors.white} />
@@ -67,11 +66,10 @@ function ChallengesTile({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${mode.title}. ${mode.description}`}
-      style={({ pressed }) => [
+      style={[
         styles.challengesTile,
         { backgroundColor: mode.tileColor },
-        pressed && styles.pressed,
-      ]}
+            ]}
     >
       <View style={styles.challengesIconWrap}>
         <Ionicons name={mode.icon} size={28} color={colors.white} />

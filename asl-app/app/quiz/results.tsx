@@ -184,10 +184,9 @@ export default function QuizResultsScreen() {
                 void continueLearning();
               }}
               accessibilityRole="button"
-              style={({ pressed }) => [
+              style={[
                 styles.continueButton,
-                pressed && styles.pressed,
-              ]}
+            ]}
             >
               <Text style={styles.continueButtonText}>Continue</Text>
               <Ionicons

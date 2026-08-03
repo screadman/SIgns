@@ -71,7 +71,7 @@ function SignGridCard({
       accessibilityLabel={`${lesson.title}${isCompleted ? ', completed' : ''}${
         isFavorite ? ', favorite' : ''
       }`}
-      style={({ pressed }) => [styles.signCard, pressed && styles.pressed]}
+      style={[styles.signCard]}
     >
       <View style={styles.signMedia}>
         {hasImage && imageSource ? (
@@ -225,10 +225,7 @@ export default function ModuleScreen() {
               accessibilityRole="button"
               accessibilityLabel="Go back"
               hitSlop={12}
-              style={({ pressed }) => [
-                styles.backButton,
-                pressed && styles.pressed,
-              ]}
+              style={[styles.backButton]}
             >
               <Ionicons name="arrow-back" size={18} color={colors.text} />
             </Pressable>
@@ -261,10 +258,9 @@ export default function ModuleScreen() {
             accessibilityRole="button"
             accessibilityLabel="Start optional practice"
             accessibilityState={{ disabled: !canPractice }}
-            style={({ pressed }) => [
+            style={[
               styles.practiceCard,
               !canPractice && styles.practiceCardDisabled,
-              pressed && canPractice && styles.pressed,
             ]}
           >
             <View style={styles.practiceCopy}>

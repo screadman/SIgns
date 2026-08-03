@@ -67,13 +67,12 @@ function AnswerButton({
           ? lesson.sign.label
           : `ASL sign for ${lesson.sign.label}`
       }
-      style={({ pressed }) => [
+      style={[
         styles.answer,
         format === 'label-to-image' && styles.imageAnswer,
         state === 'correct' && styles.correctAnswer,
         state === 'incorrect' && styles.incorrectAnswer,
-        pressed && !disabled && styles.pressed,
-      ]}
+            ]}
     >
       {format === 'image-to-label' ? (
         <Text

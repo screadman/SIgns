@@ -148,7 +148,7 @@ export default function DictionaryScreen() {
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Search categories or signs..."
+            placeholder="TESTTEST123"
             placeholderTextColor={colors.textMuted}
             style={styles.searchInput}
             accessibilityLabel="Search dictionary"
@@ -279,7 +279,7 @@ function FavoriteSignCard({
       accessibilityLabel={`${lesson.sign.label}${
         lessonData ? `, ${lessonData.module.title}` : ''
       }`}
-      style={({ pressed }) => [styles.signCard, pressed && styles.pressed]}
+      style={[styles.signCard]}
     >
       <View style={styles.signMedia}>
         {hasImage && imageSource ? (

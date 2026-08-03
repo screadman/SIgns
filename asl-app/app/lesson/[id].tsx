@@ -148,10 +148,9 @@ export default function LessonScreen() {
               }
               accessibilityRole="button"
               accessibilityLabel="Go back"
-              style={({ pressed }) => [
+              style={[
                 styles.backButton,
-                pressed && styles.pressed,
-              ]}
+            ]}
             >
               <Ionicons name="arrow-back" size={18} color={colors.text} />
             </Pressable>
@@ -184,11 +183,10 @@ export default function LessonScreen() {
               }}
               accessibilityRole="button"
               accessibilityLabel="Previous sign"
-              style={({ pressed }) => [
+              style={[
                 styles.navArrow,
                 (!previousLesson || isSaving) && styles.navArrowDisabled,
-                pressed && previousLesson && !isSaving && styles.pressed,
-              ]}
+            ]}
             >
               <Ionicons
                 name="arrow-back"
@@ -211,11 +209,10 @@ export default function LessonScreen() {
               }}
               accessibilityRole="button"
               accessibilityLabel="Next sign"
-              style={({ pressed }) => [
+              style={[
                 styles.navArrow,
                 (!nextLesson || isSaving) && styles.navArrowDisabled,
-                pressed && nextLesson && !isSaving && styles.pressed,
-              ]}
+            ]}
             >
               <Ionicons
                 name="arrow-forward"
@@ -247,11 +244,10 @@ export default function LessonScreen() {
               accessibilityRole="button"
               accessibilityLabel="Optional practice"
               accessibilityState={{ disabled: !canQuiz || isSaving }}
-              style={({ pressed }) => [
+              style={[
                 styles.actionButton,
                 (!canQuiz || isSaving) && styles.actionButtonDisabled,
-                pressed && canQuiz && !isSaving && styles.pressed,
-              ]}
+            ]}
             >
               <Ionicons
                 name="extension-puzzle"
@@ -276,12 +272,11 @@ export default function LessonScreen() {
                 }}
                 accessibilityRole="button"
                 accessibilityLabel="Mark as learned"
-                style={({ pressed }) => [
+                style={[
                   styles.actionButton,
                   styles.gotItButton,
                   justLearned && styles.gotItButtonDone,
-                  pressed && !justLearned && !isSaving && styles.pressed,
-                ]}
+            ]}
               >
                 <View style={styles.gotItIconWrap}>
                   <Ionicons

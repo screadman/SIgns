@@ -55,11 +55,10 @@ function QuizModuleRow({
       accessibilityRole="button"
       accessibilityState={{ disabled: !enabled }}
       accessibilityLabel={`${module.title} quiz`}
-      style={({ pressed }) => [
+      style={[
         styles.row,
         !enabled && styles.rowDisabled,
-        pressed && enabled && styles.pressed,
-      ]}
+            ]}
     >
       <View style={[styles.rowSwatch, { backgroundColor: module.tileColor }]} />
       <View style={styles.rowCopy}>
@@ -192,9 +191,8 @@ export default function PracticeModeScreen() {
             accessibilityRole="button"
             accessibilityLabel="Go back"
             hitSlop={12}
-            style={({ pressed }) => [
+            style={[
               styles.backButton,
-              pressed && styles.pressed,
             ]}
           >
             <Ionicons name="arrow-back" size={18} color={colors.text} />
