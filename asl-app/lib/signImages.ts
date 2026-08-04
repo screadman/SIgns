@@ -5,6 +5,7 @@ import { MODULE_IMAGES } from '../constants/aslModuleImages';
 import { NUMBER_IMAGES } from '../constants/aslNumberImages';
 import { hasMediaAsset, toImageSource } from '../constants/aslLetters';
 import type { Lesson } from '../constants/learning';
+import { WH_QUESTION_IMAGES } from '../constants/whQuestionImages';
 
 export function peekSignImage(
   moduleId: string | undefined,
@@ -20,6 +21,10 @@ export function peekSignImage(
 
   if (moduleId === 'numbers') {
     return NUMBER_IMAGES[signId];
+  }
+
+  if (moduleId === 'wh-questions') {
+    return WH_QUESTION_IMAGES[signId];
   }
 
   return MODULE_IMAGES[moduleId]?.[signId];
