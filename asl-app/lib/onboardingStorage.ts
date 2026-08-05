@@ -21,6 +21,10 @@ export type OnboardingProfile = {
   notificationsOptIn: boolean;
   /** 0 = Monday ... 6 = Sunday */
   practiceDays: number[];
+  /** Preset avatar id from constants/avatars, or null. */
+  avatarId?: string | null;
+  /** Local file URI for a custom profile photo, or null. */
+  photoUri?: string | null;
   completedAt: string;
 };
 
@@ -52,7 +56,12 @@ export async function getOnboardingProfile() {
   }
 
   try {
-    return JSON.parse(raw) as OnboardingProfile;
+    const parsed = JSON.parse(raw) as OnboardingProfile;
+    return {
+      ...parsed,
+      avatarId: parsed.avatarId ?? null,
+      photoUri: parsed.photoUri ?? null,
+    };
   } catch {
     return null;
   }
@@ -70,6 +79,8 @@ export async function saveOnboardingProfile(
   const payload: OnboardingProfile = {
     ...profile,
     name: profile.name.trim(),
+    avatarId: profile.avatarId ?? null,
+    photoUri: profile.photoUri ?? null,
     completedAt: new Date().toISOString(),
   };
 
@@ -160,6 +171,14 @@ export async function saveReminderSettings(
   };
 
   await AsyncStorage.setItem(REMINDER_SETTINGS_KEY, JSON.stringify(payload));
+
+  try {
+    const { syncPracticeReminders } = await import('./reminders');
+    await syncPracticeReminders(payload);
+  } catch {
+    // Native modules may be unavailable on web.
+  }
+
   return payload;
 }
 

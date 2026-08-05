@@ -9,6 +9,8 @@ export type SignStrengthEntry = {
   wrong: number;
   lastSeenAt: string | null;
   lastWrongAt: string | null;
+  /** ISO time when this sign is due for review (half-life SRS). */
+  dueAt: string | null;
 };
 
 export type SignStrengthMap = Record<string, SignStrengthEntry>;
@@ -20,10 +22,46 @@ const DEFAULT_ENTRY: SignStrengthEntry = {
   wrong: 0,
   lastSeenAt: null,
   lastWrongAt: null,
+  dueAt: null,
 };
 
 function clampStrength(value: number) {
   return Math.max(0, Math.min(1, value));
+}
+
+/** Simple half-life: weaker signs return sooner (hours). */
+export function computeDueAt(
+  strength: number,
+  correct: boolean,
+  from = Date.now(),
+): string {
+  const hours = correct
+    ? strength >= 0.85
+      ? 72
+      : strength >= 0.6
+        ? 36
+        : strength >= 0.4
+          ? 18
+          : 8
+    : 4;
+  return new Date(from + hours * 60 * 60 * 1000).toISOString();
+}
+
+export function isDueSign(
+  entry: SignStrengthEntry | undefined,
+  now = Date.now(),
+): boolean {
+  if (!entry) {
+    return true;
+  }
+  if (!entry.dueAt) {
+    return entry.strength < 0.85;
+  }
+  const due = Date.parse(entry.dueAt);
+  if (!Number.isFinite(due)) {
+    return true;
+  }
+  return due <= now;
 }
 
 export function getStrengthTier(
@@ -77,7 +115,9 @@ export async function recordSignAnswer(
     strength: clampStrength(
       correct ? current.strength + 0.12 : current.strength - 0.2,
     ),
+    dueAt: null,
   };
+  next.dueAt = computeDueAt(next.strength, correct);
 
   map[signId] = next;
   await AsyncStorage.setItem(SIGN_STRENGTH_KEY, JSON.stringify(map));
@@ -92,15 +132,17 @@ export async function recordSignAnswers(
 
   for (const result of results) {
     const current = map[result.signId] ?? { ...DEFAULT_ENTRY };
+    const strength = clampStrength(
+      result.correct ? current.strength + 0.12 : current.strength - 0.2,
+    );
     map[result.signId] = {
       seen: current.seen + 1,
       correct: current.correct + (result.correct ? 1 : 0),
       wrong: current.wrong + (result.correct ? 0 : 1),
       lastSeenAt: now,
       lastWrongAt: result.correct ? current.lastWrongAt : now,
-      strength: clampStrength(
-        result.correct ? current.strength + 0.12 : current.strength - 0.2,
-      ),
+      strength,
+      dueAt: computeDueAt(strength, result.correct, Date.parse(now)),
     };
   }
 
@@ -120,6 +162,12 @@ export async function markSignExposed(signId: string): Promise<SignStrengthEntry
     // Soft warm-up when first learned from a lesson.
     strength:
       current.seen === 0 ? Math.max(current.strength, 0.25) : current.strength,
+    dueAt:
+      current.dueAt ??
+      computeDueAt(
+        current.seen === 0 ? Math.max(current.strength, 0.25) : current.strength,
+        true,
+      ),
   };
 
   map[signId] = next;
@@ -127,7 +175,7 @@ export async function markSignExposed(signId: string): Promise<SignStrengthEntry
   return next;
 }
 
-/** Weak pool: low strength or wrong within last 7 days. */
+/** Weak pool: low strength, due for review, or wrong within last 7 days. */
 export function isWeakSign(
   entry: SignStrengthEntry | undefined,
   now = Date.now(),
@@ -136,7 +184,7 @@ export function isWeakSign(
     return true;
   }
 
-  if (entry.strength < 0.45) {
+  if (entry.strength < 0.45 || isDueSign(entry, now)) {
     return true;
   }
 

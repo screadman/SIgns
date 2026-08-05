@@ -75,6 +75,70 @@ export function buildQuestionsFromPrompts(
   });
 }
 
+/**
+ * Mixed mastery session for one alphabet unit:
+ * ~2 MCQ prompts per letter (cap 10-12), letter↔sign formats only,
+ * plus a 4-pair matching set for the UI phase.
+ */
+export function generateAlphabetUnitSession(unitLessons: Lesson[]): {
+  questions: QuizQuestion[];
+  matchingLessons: Lesson[];
+} {
+  const media = unitLessons.filter((lesson) => lessonHasQuizMedia(lesson));
+  if (media.length < 4) {
+    return { questions: [], matchingLessons: [] };
+  }
+
+  const targetCount = Math.min(12, Math.max(media.length, media.length * 2));
+  const prompts: Lesson[] = [];
+  const shuffledOnce = shuffle(media);
+  const shuffledTwice = shuffle(media);
+
+  for (const lesson of shuffledOnce) {
+    if (prompts.length >= targetCount) {
+      break;
+    }
+    prompts.push(lesson);
+  }
+  for (const lesson of shuffledTwice) {
+    if (prompts.length >= targetCount) {
+      break;
+    }
+    // Prefer a second pass so most letters appear ~twice when the unit is small.
+    if (prompts.filter((item) => item.id === lesson.id).length < 2) {
+      prompts.push(lesson);
+    }
+  }
+
+  while (prompts.length < Math.min(targetCount, media.length * 2)) {
+    const next = shuffledOnce[prompts.length % shuffledOnce.length];
+    if (!next) {
+      break;
+    }
+    prompts.push(next);
+  }
+
+  const questions = buildQuestionsFromPrompts(
+    shuffle(prompts).slice(0, targetCount),
+    media,
+    {
+      includeDescription: false,
+      seedKey: `unit-${media[0]?.moduleId ?? 'alphabet'}`,
+    },
+  ).map((question, index) => ({
+    ...question,
+    // Letter ↔ sign only: alternate image→label and label→image.
+    format:
+      index % 2 === 0
+        ? ('image-to-label' as const)
+        : ('label-to-image' as const),
+  }));
+
+  const matchingLessons = shuffle(media).slice(0, Math.min(4, media.length));
+
+  return { questions, matchingLessons };
+}
+
 export function generateQuiz(
   lessonId: string,
   allItems: Lesson[],

@@ -1,5 +1,5 @@
 /**
- * Practice hub modes. Dictionary browses content; Practice trains skills.
+ * Practice hub modes. Home guides the path; Practice trains skills.
  */
 
 export type PracticeModeId =

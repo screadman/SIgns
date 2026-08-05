@@ -75,6 +75,22 @@ export default function RootLayout() {
           options={{ animation: 'slide_from_right' }}
         />
         <Stack.Screen
+          name="practice/fingerspelling"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="practice/mirror"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="legal/privacy"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="legal/terms"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
           name="quiz/daily"
           options={{ animation: 'slide_from_right' }}
         />
@@ -84,6 +100,10 @@ export default function RootLayout() {
         />
         <Stack.Screen
           name="quiz/boss/[moduleId]"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="quiz/unit/[unitId]"
           options={{ animation: 'slide_from_right' }}
         />
         <Stack.Screen

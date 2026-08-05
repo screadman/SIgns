@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { LearningBottomNav } from '../../../components/ui';
+import { LearningBottomNav, GlassBackButton, SignGlassFrame } from '../../../components/ui';
 import {
   LEARNING_MODULES,
   getLearningModule,
@@ -34,6 +34,11 @@ import {
 } from '../../../constants/theme';
 import { getLastMissedLessonIds } from '../../../lib/missedSigns';
 import { getLessonImageSource } from '../../../lib/signImages';
+import {
+  getSignStrengthMap,
+  isWeakSign,
+} from '../../../lib/signStrength';
+import { getFavoriteLessons } from '../../../lib/storage';
 
 function getParam(value: string | string[] | undefined): string {
   return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
@@ -53,52 +58,83 @@ export default function FlashcardsScreen() {
   const params = useLocalSearchParams<{
     moduleId?: string | string[];
     missed?: string | string[];
+    favorites?: string | string[];
   }>();
   const moduleId = getParam(params.moduleId);
   const useMissed = getParam(params.missed) === '1';
+  const useFavorites = getParam(params.favorites) === '1';
   const module = getLearningModule(moduleId);
-  const [missedDeck, setMissedDeck] = useState<Lesson[] | null>(
-    useMissed ? null : [],
+  const [specialDeck, setSpecialDeck] = useState<Lesson[] | null>(
+    useMissed || useFavorites ? null : [],
   );
 
   useEffect(() => {
-    if (!useMissed) {
+    if (!useMissed && !useFavorites) {
       return;
     }
 
     let active = true;
 
-    async function loadMissed() {
-      const ids = await getLastMissedLessonIds();
+    async function loadSpecialDeck() {
       const all = LEARNING_MODULES.flatMap((item) => item.lessons);
+
+      if (useFavorites) {
+        const [favoriteIds, strengthMap] = await Promise.all([
+          getFavoriteLessons(),
+          getSignStrengthMap(),
+        ]);
+        const now = Date.now();
+        const lessons = favoriteIds
+          .map((id) => all.find((lesson) => lesson.id === id))
+          .filter((lesson): lesson is Lesson => Boolean(lesson))
+          .sort((a, b) => {
+            const aWeak = isWeakSign(strengthMap[a.sign.id], now) ? 0 : 1;
+            const bWeak = isWeakSign(strengthMap[b.sign.id], now) ? 0 : 1;
+            if (aWeak !== bWeak) {
+              return aWeak - bWeak;
+            }
+            return (
+              (strengthMap[a.sign.id]?.strength ?? 0) -
+              (strengthMap[b.sign.id]?.strength ?? 0)
+            );
+          });
+
+        if (active) {
+          setSpecialDeck(lessons);
+        }
+        return;
+      }
+
+      const ids = await getLastMissedLessonIds();
       const lessons = ids
         .map((id) => all.find((lesson) => lesson.id === id))
         .filter((lesson): lesson is Lesson => Boolean(lesson));
 
       if (active) {
-        setMissedDeck(shuffle(lessons));
+        setSpecialDeck(shuffle(lessons));
       }
     }
 
-    void loadMissed();
+    void loadSpecialDeck();
 
     return () => {
       active = false;
     };
-  }, [useMissed]);
+  }, [useMissed, useFavorites]);
 
   const moduleDeck = useMemo(() => {
-    if (!module || useMissed) {
+    if (!module || useMissed || useFavorites) {
       return [];
     }
     return shuffle(getModuleMediaLessons(module));
-  }, [module, useMissed]);
+  }, [module, useMissed, useFavorites]);
 
-  const deck = useMissed ? missedDeck ?? [] : moduleDeck;
+  const deck =
+    useMissed || useFavorites ? specialDeck ?? [] : moduleDeck;
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
 
-  if (useMissed && missedDeck === null) {
+  if ((useMissed || useFavorites) && specialDeck === null) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.notFound}>
@@ -108,15 +144,17 @@ export default function FlashcardsScreen() {
     );
   }
 
-  if ((!useMissed && !module) || deck.length === 0) {
+  if ((!useMissed && !useFavorites && !module) || deck.length === 0) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.notFound}>
           <Text style={styles.notFoundTitle}>Flashcards unavailable</Text>
           <Text style={styles.notFoundBody}>
-            {useMissed
-              ? 'No missed signs to review right now.'
-              : 'Add at least one illustrated sign in this collection.'}
+            {useFavorites
+              ? 'Favorite some signs first, then review weak ones here.'
+              : useMissed
+                ? 'No missed signs to review right now.'
+                : 'Add at least one illustrated sign in this collection.'}
           </Text>
           <Pressable onPress={() => router.back()} style={styles.backLink}>
             <Text style={styles.backLinkText}>Go back</Text>
@@ -128,7 +166,11 @@ export default function FlashcardsScreen() {
 
   const card = deck[index];
   const imageSource = getLessonImageSource(card);
-  const title = useMissed ? 'Missed signs' : module?.title ?? 'Flashcards';
+  const title = useFavorites
+    ? 'Favorite review'
+    : useMissed
+      ? 'Missed signs'
+      : (module?.title ?? 'Flashcards');
 
   function go(delta: number) {
     setFlipped(false);
@@ -148,18 +190,7 @@ export default function FlashcardsScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.screen}>
         <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            hitSlop={12}
-            style={({ pressed }) => [
-              styles.headerBack,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Ionicons name="arrow-back" size={18} color={colors.text} />
-          </Pressable>
+          <GlassBackButton onPress={() => router.back()} />
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.counter}>
             {index + 1}/{deck.length}
@@ -172,30 +203,32 @@ export default function FlashcardsScreen() {
             accessibilityRole="button"
             accessibilityLabel={flipped ? 'Show sign again' : 'Reveal meaning'}
             style={({ pressed }) => [
-              styles.card,
+              styles.cardPress,
               pressed && styles.pressed,
             ]}
           >
-            {!flipped ? (
-              imageSource ? (
-                <Image
-                  source={imageSource}
-                  style={styles.cardImage}
-                  resizeMode="contain"
-                />
+            <SignGlassFrame style={styles.card} contentStyle={styles.cardContent}>
+              {!flipped ? (
+                imageSource ? (
+                  <Image
+                    source={imageSource}
+                    style={styles.cardImage}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <Text style={styles.cardLabel}>{card.sign.label}</Text>
+                )
               ) : (
-                <Text style={styles.cardLabel}>{card.sign.label}</Text>
-              )
-            ) : (
-              <View style={styles.cardBack}>
-                <Text style={styles.cardLabel}>{card.sign.label}</Text>
-                <Text style={styles.cardTip}>{card.sign.description}</Text>
-                <Text style={styles.cardTip}>{card.sign.tip}</Text>
-              </View>
-            )}
-            <Text style={styles.flipHint}>
-              {flipped ? 'Tap to see the sign' : 'Tap to flip'}
-            </Text>
+                <View style={styles.cardBack}>
+                  <Text style={styles.cardLabel}>{card.sign.label}</Text>
+                  <Text style={styles.cardTip}>{card.sign.description}</Text>
+                  <Text style={styles.cardTip}>{card.sign.tip}</Text>
+                </View>
+              )}
+              <Text style={styles.flipHint}>
+                {flipped ? 'Tap to see the sign' : 'Tap to flip'}
+              </Text>
+            </SignGlassFrame>
           </Pressable>
 
           <View style={styles.navRow}>
@@ -253,14 +286,6 @@ const styles = StyleSheet.create({
     gap: spacing['2sm'],
     paddingHorizontal: spacing.lg,
   },
-  headerBack: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surfaceMuted,
-  },
   title: {
     flex: 1,
     color: colors.text,
@@ -278,15 +303,15 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
     gap: spacing.lg,
   },
-  card: {
+  cardPress: {
     flex: 1,
     maxHeight: 420,
+  },
+  card: {
+    flex: 1,
     borderRadius: borderRadius.xl,
-    borderWidth: borderWidth.thin,
-    borderColor: colors.border,
-    backgroundColor: colors.signSurface,
-    alignItems: 'center',
-    justifyContent: 'center',
+  },
+  cardContent: {
     padding: spacing.lg,
     gap: spacing.md,
   },

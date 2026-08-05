@@ -9,7 +9,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { LearningBottomNav } from '../../components/ui';
+import { GlassBackButton, LearningBottomNav } from '../../components/ui';
 import {
   LEARNING_MODULES,
   getFirstPracticeLesson,
@@ -182,7 +182,7 @@ export default function PracticeModeScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.screen}>
         <View style={styles.header}>
-          <Pressable
+          <GlassBackButton
             onPress={() => {
               if (router.canDismiss()) {
                 router.dismiss();
@@ -196,16 +196,7 @@ export default function PracticeModeScreen() {
 
               router.replace('/(tabs)/practice' as Href);
             }}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            hitSlop={12}
-            style={({ pressed }) => [
-              styles.backButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Ionicons name="arrow-back" size={18} color={colors.text} />
-          </Pressable>
+          />
           <Text style={styles.title}>{mode.title}</Text>
         </View>
 
@@ -266,6 +257,50 @@ export default function PracticeModeScreen() {
                     </Text>
                   </View>
                   <Ionicons name="refresh" size={18} color={colors.text} />
+                </Pressable>
+
+                <Pressable
+                  onPress={() =>
+                    router.push('/practice/fingerspelling' as Href)
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel="Fingerspelling trainer"
+                  style={({ pressed }) => [
+                    styles.row,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <View
+                    style={[styles.rowSwatch, { backgroundColor: '#8B5CF6' }]}
+                  />
+                  <View style={styles.rowCopy}>
+                    <Text style={styles.rowTitle}>Fingerspelling</Text>
+                    <Text style={styles.rowSubtitle}>
+                      Receptive letter drills at slow, normal, or fast pace.
+                    </Text>
+                  </View>
+                  <Ionicons name="text-outline" size={18} color={colors.text} />
+                </Pressable>
+
+                <Pressable
+                  onPress={() => router.push('/practice/mirror' as Href)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Practice Mirror"
+                  style={({ pressed }) => [
+                    styles.row,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <View
+                    style={[styles.rowSwatch, { backgroundColor: '#0EA5E9' }]}
+                  />
+                  <View style={styles.rowCopy}>
+                    <Text style={styles.rowTitle}>Practice Mirror</Text>
+                    <Text style={styles.rowSubtitle}>
+                      Camera + illustration side by side. You self-check.
+                    </Text>
+                  </View>
+                  <Ionicons name="camera-outline" size={18} color={colors.text} />
                 </Pressable>
               </View>
 
@@ -471,14 +506,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing['2sm'],
     paddingHorizontal: spacing.lg,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surfaceMuted,
   },
   title: {
     color: colors.text,

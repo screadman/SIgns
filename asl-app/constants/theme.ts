@@ -15,10 +15,19 @@ export const colors = {
   warning: '#F59E0B',
   info: '#3B82F6',
   streak: '#FF9600',
+  gem: '#38BDF8',
+  gemSurface: '#E0F2FE',
   background: '#FFFFFF',
   surface: '#F8FAFC',
   surfaceMuted: '#F3F4F6',
-  signSurface: '#F8F7EF',
+  /** Translucent glass base behind sign illustrations (was opaque beige). */
+  signSurface: 'rgba(255, 255, 255, 0.38)',
+  signGlassBorder: 'rgba(255, 255, 255, 0.72)',
+  signGlassGradient: [
+    'rgba(255, 255, 255, 0.62)',
+    'rgba(238, 242, 255, 0.36)',
+    'rgba(255, 247, 237, 0.28)',
+  ] as const,
   surfaceElevated: '#FFFFFF',
   text: '#1E1B4B',
   textMuted: '#6B7280',
@@ -29,6 +38,18 @@ export const colors = {
   transparent: 'transparent',
   white: '#FFFFFF',
   black: '#0F172A',
+  /** Learning path islands */
+  pathActive: '#4F46E5',
+  pathActiveDeep: '#3730A3',
+  pathDone: '#10B981',
+  pathDoneDeep: '#059669',
+  pathUpcoming: '#E5E7EB',
+  pathUpcomingIcon: '#9CA3AF',
+  pathTrack: '#DDD6FE',
+  pathBubble: '#FFFFFF',
+  pathBubbleText: '#4F46E5',
+  heroWash: '#EEF2FF',
+  heroWashEnd: '#FFF7ED',
 } as const;
 
 export const fontFamily = {

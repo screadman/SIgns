@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { LearningBottomNav } from '../../components/ui';
+import { LearningBottomNav, SignGlassFrame } from '../../components/ui';
 import { LEARNING_MODULES } from '../../constants/learning';
 import {
   borderRadius,
@@ -319,14 +319,14 @@ export default function MissedQuizScreen() {
           showsVerticalScrollIndicator={false}
         >
           {promptImage ? (
-            <View style={styles.promptImageContainer}>
+            <SignGlassFrame style={styles.promptImageContainer}>
               <Image
                 source={promptImage}
                 style={styles.promptImage}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors
               />
-            </View>
+            </SignGlassFrame>
           ) : (
             <View style={styles.promptLabelContainer}>
               <Text
@@ -450,11 +450,7 @@ const styles = StyleSheet.create({
   promptImageContainer: {
     width: '100%',
     height: 220,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
     borderRadius: borderRadius.xl,
-    backgroundColor: colors.signSurface,
   },
   promptImage: {
     width: 200,

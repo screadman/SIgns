@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { LearningBottomNav, PrimaryButton } from '../../../components/ui';
+import { GlassBackButton, LearningBottomNav, PrimaryButton, SignGlassFrame } from '../../../components/ui';
 import {
   getLearningModule,
   getModuleMediaLessons,
@@ -112,18 +112,7 @@ export default function MatchingScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.screen}>
         <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            hitSlop={12}
-            style={({ pressed }) => [
-              styles.headerBack,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Ionicons name="arrow-back" size={18} color={colors.text} />
-          </Pressable>
+          <GlassBackButton onPress={() => router.back()} />
           <Text style={styles.title}>{module.title}</Text>
           <Text style={styles.counter}>
             {matchedIds.length}/{round.length}
@@ -159,15 +148,22 @@ export default function MatchingScreen() {
                     matched && styles.tileMatched,
                   ]}
                 >
-                  {source ? (
-                    <Image
-                      source={source}
-                      style={styles.tileImage}
-                      resizeMode="contain"
-                    />
-                  ) : (
-                    <Text style={styles.fallbackLabel}>{lesson.sign.label}</Text>
-                  )}
+                  <SignGlassFrame
+                    style={styles.imageTileGlass}
+                    contentStyle={styles.imageTileContent}
+                  >
+                    {source ? (
+                      <Image
+                        source={source}
+                        style={styles.tileImage}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <Text style={styles.fallbackLabel}>
+                        {lesson.sign.label}
+                      </Text>
+                    )}
+                  </SignGlassFrame>
                 </Pressable>
               );
             })}
@@ -243,14 +239,6 @@ const styles = StyleSheet.create({
     gap: spacing['2sm'],
     paddingHorizontal: spacing.lg,
   },
-  headerBack: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surfaceMuted,
-  },
   title: {
     flex: 1,
     color: colors.text,
@@ -290,9 +278,15 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     borderWidth: borderWidth.thick,
     borderColor: colors.border,
-    backgroundColor: colors.signSurface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  imageTileGlass: {
+    flex: 1,
+    borderRadius: borderRadius.md,
+    borderWidth: 0,
+  },
+  imageTileContent: {
+    padding: spacing.xs,
   },
   tileImage: {
     width: 96,

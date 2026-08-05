@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { LearningBottomNav, PrimaryButton } from '../../components/ui';
+import { LearningBottomNav, PrimaryButton, ScreenBackdrop } from '../../components/ui';
 import { BADGES_BY_ID, bossBadgeId } from '../../constants/badges';
 import {
   LEARNING_MODULES,
@@ -63,10 +63,12 @@ export default function QuizResultsScreen() {
     source?: string | string[];
     missed?: string | string[];
     moduleId?: string | string[];
+    continueTo?: string | string[];
   }>();
   const lessonId = getParam(params.lessonId);
   const source = getParam(params.source) || 'module';
   const bossModuleId = getParam(params.moduleId);
+  const continueTo = getParam(params.continueTo);
   const missedIds = getParam(params.missed)
     .split(',')
     .map((id) => id.trim())
@@ -80,7 +82,9 @@ export default function QuizResultsScreen() {
   const isDaily = source === 'daily';
   const isMissed = source === 'missed';
   const isBoss = source === 'boss';
+  const isUnit = source === 'unit';
   const bossModule = isBoss ? getLearningModule(bossModuleId) : undefined;
+  const unitModule = isUnit ? getLearningModule(bossModuleId || 'alphabet') : undefined;
   const score = Math.max(0, getNumberParam(params.score, 0));
   const total = Math.max(1, getNumberParam(params.total, 3));
   const bossPerfect = isBoss && score >= total && total > 0;
@@ -123,7 +127,9 @@ export default function QuizResultsScreen() {
             ? 'daily'
             : isMissed
               ? 'missed'
-              : 'module',
+              : isUnit
+                ? 'module'
+                : 'module',
         bossModuleId: bossModule?.id,
       });
       return snapshot;
@@ -134,6 +140,7 @@ export default function QuizResultsScreen() {
     isBoss,
     isDaily,
     isMissed,
+    isUnit,
     lessonId,
     resultId,
     score,
@@ -160,6 +167,16 @@ export default function QuizResultsScreen() {
   async function goHomeOrContinue() {
     await savePromiseRef.current;
 
+    if (isUnit && continueTo) {
+      router.replace(continueTo as Href);
+      return;
+    }
+
+    if (isUnit) {
+      router.replace('/module/alphabet' as Href);
+      return;
+    }
+
     if (isDaily || isMissed || isBoss) {
       router.replace('/(tabs)/home' as Href);
       return;
@@ -172,11 +189,12 @@ export default function QuizResultsScreen() {
       return;
     }
 
-    router.replace('/(tabs)/learn' as Href);
+    router.replace('/(tabs)/home' as Href);
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <ScreenBackdrop variant="quiz">
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.screen}>
         <ScrollView
           style={styles.content}
@@ -196,13 +214,17 @@ export default function QuizResultsScreen() {
                   ? bossPerfect
                     ? 'Boss cleared!'
                     : 'Boss run over'
-                  : 'Quiz complete!'}
+                  : isUnit
+                    ? earnedStars >= 1
+                      ? 'Unit complete!'
+                      : 'Keep practicing'
+                    : 'Quiz complete!'}
           </Text>
           <Text style={styles.subtitle}>
             {isDaily
               ? score === total
-                ? 'Perfect day. Streak secured!'
-                : 'Nice work. Your practice day is secured.'
+                ? 'Perfect day. Streak secured! Check your path on Home.'
+                : 'Nice work. Streak secured. Keep moving along your path.'
               : isMissed
                 ? score === total
                   ? 'Those signs are getting stronger.'
@@ -211,9 +233,13 @@ export default function QuizResultsScreen() {
                   ? bossPerfect
                     ? `${bossModule?.title ?? 'Module'} Boss badge unlocked.`
                     : 'One miss ends it. Try again when you are ready.'
-                  : score === total
-                    ? 'Perfect score. Amazing work!'
-                    : 'Great practice. Keep building your skills!'}
+                  : isUnit
+                    ? earnedStars >= 1
+                      ? `${unitModule?.title ?? 'Alphabet'} unit cleared. Next island unlocked.`
+                      : 'Score at least half to clear this unit, then try again.'
+                    : score === total
+                      ? 'Perfect score. That moves you forward on the path.'
+                      : 'Great practice. Open Home to see what is left.'}
           </Text>
 
           {bossBadge ? (
@@ -252,8 +278,11 @@ export default function QuizResultsScreen() {
             </View>
             <View style={styles.divider} />
             <View style={styles.stat}>
-              <Text style={[styles.statValue, styles.xpValue]}>+{xp}</Text>
-              <Text style={styles.statLabel}>XP earned</Text>
+              <View style={styles.gemRow}>
+                <Ionicons name="diamond" size={18} color={colors.gem} />
+                <Text style={[styles.statValue, styles.xpValue]}>+{xp}</Text>
+              </View>
+              <Text style={styles.statLabel}>Gems earned</Text>
             </View>
           </View>
 
@@ -297,13 +326,15 @@ export default function QuizResultsScreen() {
 
             <PrimaryButton
               title={
-                isDaily || isMissed || isBoss
-                  ? 'Back to Home'
-                  : 'Play again'
+                isUnit
+                  ? 'Back to Alphabet'
+                  : isDaily || isMissed || isBoss
+                    ? 'Back to Home'
+                    : 'Play again'
               }
               fullWidth
               onPress={() => {
-                if (isDaily || isMissed || isBoss) {
+                if (isDaily || isMissed || isBoss || isUnit) {
                   void goHomeOrContinue();
                   return;
                 }
@@ -335,7 +366,23 @@ export default function QuizResultsScreen() {
               </Pressable>
             ) : null}
 
-            {!isDaily && !isMissed && !isBoss ? (
+            {isUnit && earnedStars < 1 && lessonId.startsWith('unit-') ? (
+              <Pressable
+                onPress={() => {
+                  const unitRouteId = lessonId.replace(/^unit-/, '');
+                  router.replace(`/quiz/unit/${unitRouteId}` as Href);
+                }}
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.continueButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.continueButtonText}>Retry unit</Text>
+              </Pressable>
+            ) : null}
+
+            {!isDaily && !isMissed && !isBoss && !isUnit ? (
               <Pressable
                 onPress={() => {
                   void goHomeOrContinue();
@@ -353,7 +400,7 @@ export default function QuizResultsScreen() {
                   color={colors.primary}
                 />
               </Pressable>
-            ) : missedCount === 0 && !isBoss ? (
+            ) : missedCount === 0 && !isBoss && !isUnit ? (
               <Pressable
                 onPress={() => router.replace('/(tabs)/practice' as Href)}
                 accessibilityRole="button"
@@ -369,17 +416,19 @@ export default function QuizResultsScreen() {
         </ScrollView>
       </View>
       <LearningBottomNav />
-    </SafeAreaView>
+      </SafeAreaView>
+    </ScreenBackdrop>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.transparent,
   },
   screen: {
     flex: 1,
+    backgroundColor: colors.transparent,
   },
   content: {
     flex: 1,
@@ -444,7 +493,13 @@ const styles = StyleSheet.create({
     lineHeight: lineHeight['2xl'],
   },
   xpValue: {
-    color: colors.success,
+    color: colors.gem,
+  },
+  gemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
   statLabel: {
     marginTop: spacing.xs,

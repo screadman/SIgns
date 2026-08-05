@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PILL_TAB_BAR_HEIGHT } from '../../components/ui/PillTabBar';
+import { ScreenBackdrop } from '../../components/ui';
 import { PRACTICE_MODES, type PracticeMode } from '../../constants/practice';
 import {
   borderRadius,
@@ -101,69 +102,117 @@ export default function PracticeScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView
-        style={styles.screen}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={styles.title}>Practice</Text>
-        <Text style={styles.subtitle}>
-          Pick a mode. Dictionary stays free to browse; practice is optional.
-        </Text>
+    <ScreenBackdrop variant="practice">
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <ScrollView
+          style={styles.screen}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.subtitle}>
+            Pick a drill and practice at your own pace.
+          </Text>
 
-        {challengesMode ? (
-          <ChallengesTile
-            mode={challengesMode}
-            onPress={() => {
-              router.push(`/practice-mode/${challengesMode.id}` as Href);
-            }}
-          />
-        ) : null}
+          <Pressable
+            style={styles.dailyRow}
+            onPress={() => router.push('/quiz/daily' as Href)}
+            accessibilityRole="button"
+            accessibilityLabel="Open Daily Quiz"
+          >
+            <View style={styles.dailyIcon}>
+              <Ionicons name="flash" size={20} color={colors.primary} />
+            </View>
+            <View style={styles.dailyCopy}>
+              <Text style={styles.dailyTitle}>Daily Quiz</Text>
+              <Text style={styles.dailySubtitle}>Protect your streak</Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={colors.textMuted}
+            />
+          </Pressable>
 
-        <View style={styles.grid}>
-          {gridModes.map((mode) => (
-            <ModeTile
-              key={mode.id}
-              mode={mode}
-              width={tileWidth}
+          {challengesMode ? (
+            <ChallengesTile
+              mode={challengesMode}
               onPress={() => {
-                router.push(`/practice-mode/${mode.id}` as Href);
+                router.push(`/practice-mode/${challengesMode.id}` as Href);
               }}
             />
-          ))}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          ) : null}
+
+          <View style={styles.grid}>
+            {gridModes.map((mode) => (
+              <ModeTile
+                key={mode.id}
+                mode={mode}
+                width={tileWidth}
+                onPress={() => {
+                  router.push(`/practice-mode/${mode.id}` as Href);
+                }}
+              />
+            ))}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </ScreenBackdrop>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.transparent,
   },
   screen: {
     flex: 1,
+    backgroundColor: colors.transparent,
   },
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: PILL_TAB_BAR_HEIGHT + spacing.xl,
   },
-  title: {
-    color: colors.text,
-    fontFamily: fontFamily.headingExtraBold,
-    fontSize: fontSize['2xl'],
-    lineHeight: lineHeight['2xl'],
-  },
   subtitle: {
     color: colors.textMuted,
     fontFamily: fontFamily.body,
     fontSize: fontSize.base,
     lineHeight: lineHeight.base,
-    marginTop: spacing.xs,
     marginBottom: spacing.lg,
+  },
+  dailyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderRadius: borderRadius.xl,
+    backgroundColor: colors.primarySurface,
+    borderWidth: 1,
+    borderColor: colors.pathTrack,
+  },
+  dailyIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dailyCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  dailyTitle: {
+    color: colors.text,
+    fontFamily: fontFamily.heading,
+    fontSize: fontSize.base,
+  },
+  dailySubtitle: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.sm,
   },
   challengesTile: {
     alignSelf: 'stretch',

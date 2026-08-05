@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { OnboardingOption, StreakCommit } from '../components/onboarding';
 import type { PracticeDayIndex } from '../components/onboarding';
-import { PrimaryButton } from '../components/ui';
+import { PrimaryButton, GlassBackButton } from '../components/ui';
 import {
   DAILY_GOAL_OPTIONS,
   EXPERIENCE_OPTIONS,
@@ -458,15 +458,7 @@ export default function OnboardingSetupScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <View style={styles.header}>
         {stepIndex > 0 ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            disabled={isSaving}
-            onPress={goBack}
-            style={styles.backButton}
-          >
-            <Ionicons name="chevron-back" size={26} color={colors.textMuted} />
-          </Pressable>
+          <GlassBackButton onPress={goBack} disabled={isSaving} />
         ) : null}
 
         <View style={styles.progressTrack}>
@@ -689,12 +681,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
     minHeight: 56,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   progressTrack: {
     flex: 1,

@@ -17,6 +17,10 @@ import { markSignExposed } from './signStrength';
 
 export const COMPLETED_LESSONS_KEY = 'completed_lessons';
 export const STARS_KEY = 'stars';
+/** Best quiz stars (0–3) earned per lesson id. */
+export const LESSON_STARS_KEY = 'lesson_stars_v1';
+/** Best quiz stars (0–3) earned per module id (boss / module best). */
+export const MODULE_STARS_KEY = 'module_stars_v1';
 export const XP_KEY = 'xp';
 export const ACTIVITY_DATES_KEY = 'activity_dates';
 export const LAST_QUIZ_RESULT_ID_KEY = 'last_quiz_result_id';
@@ -295,6 +299,121 @@ export async function addStars(earnedStars: number): Promise<number> {
   return updatedStars;
 }
 
+export type PathStarsMap = Record<string, number>;
+
+async function readStarsMap(key: string): Promise<PathStarsMap> {
+  const storedValue = await AsyncStorage.getItem(key);
+  if (!storedValue) {
+    return {};
+  }
+  try {
+    const parsed = JSON.parse(storedValue) as PathStarsMap;
+    if (!parsed || typeof parsed !== 'object') {
+      return {};
+    }
+    const next: PathStarsMap = {};
+    for (const [id, value] of Object.entries(parsed)) {
+      const stars = Math.max(0, Math.min(3, Math.floor(Number(value) || 0)));
+      if (stars > 0) {
+        next[id] = stars;
+      }
+    }
+    return next;
+  } catch {
+    return {};
+  }
+}
+
+export async function getLessonStarsMap(): Promise<PathStarsMap> {
+  return readStarsMap(LESSON_STARS_KEY);
+}
+
+export async function getModuleStarsMap(): Promise<PathStarsMap> {
+  return readStarsMap(MODULE_STARS_KEY);
+}
+
+export async function saveBestLessonStars(
+  lessonId: string,
+  stars: number,
+): Promise<void> {
+  const id = lessonId.trim();
+  const nextStars = Math.max(0, Math.min(3, Math.floor(stars)));
+  if (!id || nextStars <= 0) {
+    return;
+  }
+  const map = await getLessonStarsMap();
+  const previous = map[id] ?? 0;
+  if (nextStars <= previous) {
+    return;
+  }
+  map[id] = nextStars;
+  await AsyncStorage.setItem(LESSON_STARS_KEY, JSON.stringify(map));
+}
+
+export async function saveBestModuleStars(
+  moduleId: string,
+  stars: number,
+): Promise<void> {
+  const id = moduleId.trim();
+  const nextStars = Math.max(0, Math.min(3, Math.floor(stars)));
+  if (!id || nextStars <= 0) {
+    return;
+  }
+  const map = await getModuleStarsMap();
+  const previous = map[id] ?? 0;
+  if (nextStars <= previous) {
+    return;
+  }
+  map[id] = nextStars;
+  await AsyncStorage.setItem(MODULE_STARS_KEY, JSON.stringify(map));
+}
+
+/** Best stars shown on a Home module island (module record, else best lesson). */
+export function resolveModuleDisplayStars(
+  moduleId: string,
+  moduleStars: PathStarsMap,
+  lessonStars: PathStarsMap,
+  completedLessonIds: string[] = [],
+): number {
+  const direct = moduleStars[moduleId] ?? 0;
+  if (direct > 0) {
+    return direct;
+  }
+  const module = getLearningModule(moduleId);
+  if (!module) {
+    return 0;
+  }
+  const bestFromLessons = module.lessons.reduce(
+    (best, lesson) => Math.max(best, lessonStars[lesson.id] ?? 0),
+    0,
+  );
+  if (bestFromLessons > 0) {
+    return bestFromLessons;
+  }
+  const completed = new Set(completedLessonIds);
+  const anyLessonDone = module.lessons.some((lesson) =>
+    completed.has(lesson.id),
+  );
+  // Legacy completions (before per-lesson stars) still show a note.
+  return anyLessonDone ? 1 : 0;
+}
+
+/** Stars beside a lesson island; completed signs without a quiz record show 1. */
+export function resolveLessonDisplayStars(
+  lessonId: string | null | undefined,
+  lessonStars: PathStarsMap,
+  isDone: boolean,
+): number {
+  if (!lessonId) {
+    return isDone ? 1 : 0;
+  }
+  const stored = lessonStars[lessonId] ?? 0;
+  if (stored > 0) {
+    return stored;
+  }
+  return isDone ? 1 : 0;
+}
+
 export async function getTotalXP(): Promise<number> {
   const storedValue = await AsyncStorage.getItem(XP_KEY);
 
@@ -553,10 +672,28 @@ export async function saveQuizResult(
   const isSessionResult =
     lessonId.startsWith('daily-') ||
     lessonId.startsWith('missed-') ||
-    lessonId.startsWith('boss-');
+    lessonId.startsWith('boss-') ||
+    lessonId.startsWith('unit-');
 
   if (!isSessionResult) {
     await saveCompletedLesson(lessonId);
+    await saveBestLessonStars(lessonId, stars);
+    const lesson = LEARNING_MODULES.flatMap((module) => module.lessons).find(
+      (item) => item.id === lessonId,
+    );
+    if (lesson) {
+      await saveBestModuleStars(lesson.moduleId, stars);
+    }
+  } else if (lessonId.startsWith('boss-')) {
+    const moduleId = lessonId.replace(/^boss-/, '');
+    await saveBestModuleStars(moduleId, stars);
+    await saveBestLessonStars(lessonId, stars);
+  } else if (lessonId.startsWith('unit-')) {
+    // Letter completion is handled in the unit session screen before results.
+    await saveBestLessonStars(lessonId, stars);
+    if (lessonId.includes('alphabet')) {
+      await saveBestModuleStars('alphabet', stars);
+    }
   }
   await addStars(stars);
   await addXP(xp);

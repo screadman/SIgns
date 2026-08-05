@@ -29,7 +29,7 @@ export type LearningModuleId =
   | 'sports';
 
 export type LearningModuleIcon =
-  | 'close-circle-outline'
+  | 'text-outline'
   | 'apps-outline'
   | 'chatbubbles-outline'
   | 'help-circle-outline'
@@ -56,7 +56,7 @@ export type LearningModule = {
   icon: LearningModuleIcon;
   color: string;
   surfaceColor: string;
-  /** Solid fill for the Dictionary grid tile. */
+  /** Solid fill for module tiles in practice pickers. */
   tileColor: string;
   /** When true, module screen uses a vertical sign list instead of letter bubbles. */
   listLayout: boolean;
@@ -120,7 +120,7 @@ export const LEARNING_MODULES: LearningModule[] = [
     id: 'alphabet',
     title: 'Alphabet',
     description: 'Learn the 26 letters of the American Sign Language alphabet.',
-    icon: 'close-circle-outline',
+    icon: 'text-outline',
     color: colors.primary,
     surfaceColor: colors.primarySurface,
     tileColor: '#F472B6',

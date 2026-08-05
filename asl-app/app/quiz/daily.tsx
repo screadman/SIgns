@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { LearningBottomNav } from '../../components/ui';
+import { LearningBottomNav, ScreenBackdrop, SignGlassFrame } from '../../components/ui';
 import { LEARNING_MODULES } from '../../constants/learning';
 import {
   borderRadius,
@@ -46,6 +46,7 @@ import {
 } from '../../lib/signImages';
 import { recordSignAnswers } from '../../lib/signStrength';
 import { getNextLesson } from '../../lib/storage';
+import { getCultureCardForToday } from '../../constants/cultureCards';
 
 const ALL_LESSONS = LEARNING_MODULES.flatMap((module) => module.lessons);
 
@@ -123,15 +124,18 @@ export default function DailyQuizScreen() {
   const router = useRouter();
   const [questions, setQuestions] = useState<QuizQuestion[] | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [phase, setPhase] = useState<'warmup' | 'quiz' | 'culture'>('warmup');
+  const [warmUpIndex, setWarmUpIndex] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [selectedAnswerId, setSelectedAnswerId] = useState<string | null>(null);
   const [isFinishing, setIsFinishing] = useState(false);
-  const answerLog = useRef<Array<{ signId: string; correct: boolean; lessonId: string }>>(
-    [],
-  );
+  const answerLog = useRef<
+    Array<{ signId: string; correct: boolean; lessonId: string }>
+  >([]);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingResults = useRef<Record<string, string> | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -211,18 +215,29 @@ export default function DailyQuizScreen() {
     const earnedXp = getQuizXp(finalScore, questions.length);
     const resultId = `daily-${Date.now()}`;
 
+    // Show a short culture card before results (stills-only pedagogy).
+    pendingResults.current = {
+      lessonId: `daily-${new Date().toISOString().slice(0, 10)}`,
+      score: String(finalScore),
+      total: String(questions.length),
+      xp: String(earnedXp),
+      stars: String(earnedStars),
+      resultId,
+      source: 'daily',
+      missed: missedLessonIds.join(','),
+    };
+    setPhase('culture');
+  }
+
+  function goToResults() {
+    const params = pendingResults.current;
+    if (!params) {
+      router.replace('/(tabs)/home' as Href);
+      return;
+    }
     router.replace({
       pathname: '/quiz/results',
-      params: {
-        lessonId: `daily-${new Date().toISOString().slice(0, 10)}`,
-        score: String(finalScore),
-        total: String(questions.length),
-        xp: String(earnedXp),
-        stars: String(earnedStars),
-        resultId,
-        source: 'daily',
-        missed: missedLessonIds.join(','),
-      },
+      params,
     } as Href);
   }
 
@@ -290,6 +305,83 @@ export default function DailyQuizScreen() {
     );
   }
 
+  const warmUpCards = questions.slice(0, Math.min(2, questions.length));
+  const warmUpLesson = warmUpCards[warmUpIndex]?.prompt;
+  const cultureCard = getCultureCardForToday();
+
+  if (phase === 'culture') {
+    return (
+      <ScreenBackdrop variant="quiz">
+        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <View style={styles.notFound}>
+          <Text style={styles.cultureEyebrow}>Deaf culture note</Text>
+          <Text style={styles.notFoundTitle}>{cultureCard.title}</Text>
+          <Text style={styles.notFoundBody}>{cultureCard.body}</Text>
+          <Pressable onPress={goToResults} style={styles.primaryWarmUp}>
+            <Text style={styles.primaryWarmUpText}>See results</Text>
+          </Pressable>
+        </View>
+        <LearningBottomNav />
+        </SafeAreaView>
+      </ScreenBackdrop>
+    );
+  }
+
+  if (phase === 'warmup' && warmUpLesson) {
+    const warmImage = getLessonImageSource(warmUpLesson);
+    return (
+      <ScreenBackdrop variant="quiz">
+        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <View style={styles.screen}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Warm-up</Text>
+            <View style={styles.questionBadge}>
+              <Text style={styles.questionBadgeText}>
+                {warmUpIndex + 1}/{warmUpCards.length}
+              </Text>
+            </View>
+          </View>
+          <ScrollView contentContainerStyle={styles.contentContainer}>
+            <Text style={styles.warmHint}>
+              Glance at today&apos;s signs before the quiz.
+            </Text>
+            <SignGlassFrame style={styles.promptImageContainer}>
+              {warmImage ? (
+                <Image
+                  source={warmImage}
+                  style={styles.promptImage}
+                  resizeMode="contain"
+                />
+              ) : (
+                <Text style={styles.promptLabel}>{warmUpLesson.sign.label}</Text>
+              )}
+            </SignGlassFrame>
+            <Text style={styles.promptLabel}>{warmUpLesson.sign.label}</Text>
+            <Text style={styles.warmTip}>{warmUpLesson.sign.tip}</Text>
+            <Pressable
+              style={styles.primaryWarmUp}
+              onPress={() => {
+                if (warmUpIndex >= warmUpCards.length - 1) {
+                  setPhase('quiz');
+                  return;
+                }
+                setWarmUpIndex((index) => index + 1);
+              }}
+            >
+              <Text style={styles.primaryWarmUpText}>
+                {warmUpIndex >= warmUpCards.length - 1
+                  ? 'Start quiz'
+                  : 'Next sign'}
+              </Text>
+            </Pressable>
+          </ScrollView>
+        </View>
+        <LearningBottomNav />
+      </SafeAreaView>
+      </ScreenBackdrop>
+    );
+  }
+
   const selectedIsCorrect =
     selectedAnswerId === currentQuestion.correctAnswerId;
   const promptImage =
@@ -299,7 +391,8 @@ export default function DailyQuizScreen() {
       : undefined;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <ScreenBackdrop variant="quiz">
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.screen}>
         <View style={styles.header}>
           <View style={styles.quizHeading}>
@@ -328,14 +421,14 @@ export default function DailyQuizScreen() {
           showsVerticalScrollIndicator={false}
         >
           {promptImage ? (
-            <View style={styles.promptImageContainer}>
+            <SignGlassFrame style={styles.promptImageContainer}>
               <Image
                 source={promptImage}
                 style={styles.promptImage}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors
               />
-            </View>
+            </SignGlassFrame>
           ) : (
             <View style={styles.promptLabelContainer}>
               <Text
@@ -401,17 +494,19 @@ export default function DailyQuizScreen() {
         </ScrollView>
       </View>
       <LearningBottomNav />
-    </SafeAreaView>
+      </SafeAreaView>
+    </ScreenBackdrop>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.transparent,
   },
   screen: {
     flex: 1,
+    backgroundColor: colors.transparent,
   },
   header: {
     height: 64,
@@ -459,11 +554,7 @@ const styles = StyleSheet.create({
   promptImageContainer: {
     width: '100%',
     height: 220,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
     borderRadius: borderRadius.xl,
-    backgroundColor: colors.signSurface,
   },
   promptImage: {
     width: 200,
@@ -586,5 +677,38 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontFamily: fontFamily.bodySemibold,
     fontSize: fontSize.base,
+  },
+  warmHint: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.base,
+    textAlign: 'center',
+  },
+  warmTip: {
+    color: colors.primary,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: fontSize.sm,
+    textAlign: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  primaryWarmUp: {
+    marginTop: spacing.md,
+    minHeight: 48,
+    paddingHorizontal: spacing.xl,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryWarmUpText: {
+    color: colors.white,
+    fontFamily: fontFamily.heading,
+    fontSize: fontSize.base,
+  },
+  cultureEyebrow: {
+    color: colors.primary,
+    fontFamily: fontFamily.heading,
+    fontSize: fontSize.xs,
+    marginBottom: spacing.xs,
   },
 });

@@ -1,7 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { hasMediaAsset, toImageSource, type AslGlyph } from '../../constants/aslLetters';
+import {
+  hasMediaAsset,
+  toImageSource,
+  type AslGlyph,
+} from '../../constants/aslLetters';
 import type { LearningModuleId } from '../../constants/learning';
 import {
   borderRadius,
@@ -10,10 +15,16 @@ import {
   fontFamily,
   fontSize,
   lineHeight,
-  shadows,
   spacing,
 } from '../../constants/theme';
+import {
+  PARAMETER_LABELS,
+  getSignImageSequence,
+  resolveSignParameters,
+  type SignParameterKey,
+} from '../../lib/signParameters';
 import { peekSignImage } from '../../lib/signImages';
+import { SignGlassFrame } from './SignGlassFrame';
 
 type SignCardProps = {
   sign: AslGlyph;
@@ -22,15 +33,37 @@ type SignCardProps = {
   featured?: boolean;
 };
 
+const PARAM_ORDER: SignParameterKey[] = [
+  'handshape',
+  'location',
+  'movement',
+  'orientation',
+  'nmm',
+];
+
 export function SignCard({
   sign,
   moduleId,
   accessibilityPrefix = 'ASL sign for',
   featured = false,
 }: SignCardProps) {
-  const imageSource =
-    toImageSource(sign.image) ?? peekSignImage(moduleId, sign.id);
-  const hasImage = hasMediaAsset(imageSource);
+  const mappedImage = peekSignImage(moduleId, sign.id);
+  const sequence = getSignImageSequence({
+    ...sign,
+    image: sign.image ?? mappedImage,
+  }).map((item) => toImageSource(item)).filter(Boolean);
+  const fallbackSource = toImageSource(sign.image) ?? mappedImage;
+  const frames =
+    sequence.length > 0
+      ? sequence
+      : fallbackSource
+        ? [fallbackSource]
+        : [];
+  const [frameIndex, setFrameIndex] = useState(0);
+  const activeSource = frames[Math.min(frameIndex, frames.length - 1)];
+  const hasImage = hasMediaAsset(activeSource);
+  const parameters = resolveSignParameters(sign);
+  const isSequence = frames.length > 1;
 
   return (
     <View
@@ -38,12 +71,12 @@ export function SignCard({
       accessible
       accessibilityLabel={`${accessibilityPrefix} ${sign.label}. ${sign.description}`}
     >
-      <View
+      <SignGlassFrame
         style={[styles.imageContainer, featured && styles.featuredImageContainer]}
       >
-        {hasImage ? (
+        {hasImage && activeSource ? (
           <Image
-            source={imageSource}
+            source={activeSource}
             style={[styles.image, featured && styles.featuredImage]}
             resizeMode="contain"
             accessibilityIgnoresInvertColors
@@ -60,7 +93,43 @@ export function SignCard({
             </Text>
           </View>
         )}
-      </View>
+
+        {isSequence ? (
+          <View style={styles.sequenceControls}>
+            <Pressable
+              onPress={() =>
+                setFrameIndex((index) =>
+                  index === 0 ? frames.length - 1 : index - 1,
+                )
+              }
+              accessibilityRole="button"
+              accessibilityLabel="Previous frame"
+              hitSlop={8}
+              style={styles.sequenceButton}
+            >
+              <Ionicons name="chevron-back" size={16} color={colors.primary} />
+            </Pressable>
+            <Text style={styles.sequenceLabel}>
+              Frame {frameIndex + 1}/{frames.length}
+            </Text>
+            <Pressable
+              onPress={() =>
+                setFrameIndex((index) => (index + 1) % frames.length)
+              }
+              accessibilityRole="button"
+              accessibilityLabel="Next frame"
+              hitSlop={8}
+              style={styles.sequenceButton}
+            >
+              <Ionicons
+                name="chevron-forward"
+                size={16}
+                color={colors.primary}
+              />
+            </Pressable>
+          </View>
+        ) : null}
+      </SignGlassFrame>
 
       <Text style={[styles.label, featured && styles.featuredLabel]}>
         {sign.label}
@@ -68,8 +137,21 @@ export function SignCard({
       <Text style={[styles.description, featured && styles.featuredDescription]}>
         {sign.description}
       </Text>
-      {featured && sign.tip ? (
+
+      {(featured || Boolean(sign.tip)) && sign.tip ? (
         <Text style={styles.tip}>{sign.tip}</Text>
+      ) : null}
+
+      {featured ? (
+        <View style={styles.paramsBlock}>
+          <Text style={styles.paramsTitle}>Parameters</Text>
+          {PARAM_ORDER.map((key) => (
+            <View key={key} style={styles.paramRow}>
+              <Text style={styles.paramChip}>{PARAMETER_LABELS[key]}</Text>
+              <Text style={styles.paramText}>{parameters[key]}</Text>
+            </View>
+          ))}
+        </View>
       ) : null}
     </View>
   );
@@ -78,97 +160,116 @@ export function SignCard({
 const styles = StyleSheet.create({
   card: {
     width: '48%',
-    minHeight: 238,
-    alignItems: 'center',
-    padding: spacing.md,
-    borderWidth: borderWidth.thin,
-    borderColor: colors.primarySurface,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.surfaceElevated,
-    ...shadows.sm,
+    gap: spacing.xs,
   },
   featuredCard: {
     width: '100%',
-    minHeight: 0,
-    padding: 0,
-    borderWidth: 0,
-    borderRadius: 0,
-    backgroundColor: colors.transparent,
-    shadowOpacity: 0,
-    elevation: 0,
+    gap: spacing.sm,
   },
   imageContainer: {
     width: '100%',
-    height: 132,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.primarySurface,
+    aspectRatio: 1,
+    borderRadius: borderRadius.lg,
   },
   featuredImageContainer: {
-    height: 200,
+    aspectRatio: 1.1,
     borderRadius: borderRadius.xl,
-    backgroundColor: colors.signSurface,
   },
   image: {
-    width: 116,
-    height: 116,
+    width: '88%',
+    height: '88%',
   },
   featuredImage: {
-    width: '100%',
-    height: '100%',
+    width: '92%',
+    height: '92%',
   },
   mediaPlaceholder: {
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
+    gap: spacing.xs,
     paddingHorizontal: spacing.md,
   },
   mediaPlaceholderText: {
     color: colors.textMuted,
     fontFamily: fontFamily.bodyMedium,
-    fontSize: fontSize.sm,
-    lineHeight: lineHeight.sm,
+    fontSize: fontSize.xs,
     textAlign: 'center',
+  },
+  sequenceControls: {
+    position: 'absolute',
+    bottom: spacing.sm,
+    left: spacing.sm,
+    right: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surfaceElevated,
+  },
+  sequenceButton: {
+    padding: spacing.xs,
+  },
+  sequenceLabel: {
+    color: colors.primary,
+    fontFamily: fontFamily.bodySemibold,
+    fontSize: fontSize.xs,
   },
   label: {
-    color: colors.primary,
-    fontFamily: fontFamily.headingExtraBold,
-    fontSize: fontSize['2xl'],
-    lineHeight: lineHeight['2xl'],
-    marginTop: spacing['2sm'],
+    color: colors.text,
+    fontFamily: fontFamily.heading,
+    fontSize: fontSize.base,
+    textAlign: 'center',
   },
   featuredLabel: {
-    fontSize: 32,
-    lineHeight: 38,
-    marginTop: spacing.md,
-    textAlign: 'center',
+    fontFamily: fontFamily.headingExtraBold,
+    fontSize: fontSize['2xl'],
+    textAlign: 'left',
   },
   description: {
     color: colors.textMuted,
     fontFamily: fontFamily.body,
     fontSize: fontSize.xs,
-    lineHeight: lineHeight.xs,
-    marginTop: spacing.xs,
+    lineHeight: lineHeight.sm,
     textAlign: 'center',
   },
   featuredDescription: {
-    width: '100%',
-    maxWidth: 342,
-    color: colors.text,
-    fontSize: 15,
-    lineHeight: 22,
-    marginTop: spacing.sm,
+    fontSize: fontSize.base,
+    lineHeight: lineHeight.base,
+    textAlign: 'left',
   },
   tip: {
-    width: '100%',
-    maxWidth: 342,
-    marginTop: spacing.sm,
+    color: colors.primary,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: fontSize.sm,
+    lineHeight: lineHeight.sm,
+  },
+  paramsBlock: {
+    marginTop: spacing.xs,
+    gap: spacing['2sm'],
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: borderWidth.thin,
+    borderColor: colors.border,
+  },
+  paramsTitle: {
+    color: colors.text,
+    fontFamily: fontFamily.heading,
+    fontSize: fontSize.sm,
+  },
+  paramRow: {
+    gap: 4,
+  },
+  paramChip: {
+    color: colors.primary,
+    fontFamily: fontFamily.bodySemibold,
+    fontSize: fontSize.xs,
+  },
+  paramText: {
     color: colors.textMuted,
     fontFamily: fontFamily.body,
     fontSize: fontSize.sm,
     lineHeight: lineHeight.sm,
-    textAlign: 'center',
   },
 });

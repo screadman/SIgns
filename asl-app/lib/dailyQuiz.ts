@@ -101,11 +101,20 @@ function pickDailyPrompts(input: {
     LEARNING_MODULES[0];
   const anchor = mediaLessons(focus?.lessons ?? media);
 
-  const filler = [...media].sort(
-    (a, b) =>
-      (strengthMap[a.sign.id]?.strength ?? 0) -
-      (strengthMap[b.sign.id]?.strength ?? 0),
-  );
+  const filler = [...media]
+    .filter((lesson) => {
+      const entry = strengthMap[lesson.sign.id];
+      // Anti-farm: skip mastered undued signs while weaker ones remain.
+      if (entry && entry.strength >= 0.9 && !isWeakSign(entry, now)) {
+        return false;
+      }
+      return true;
+    })
+    .sort(
+      (a, b) =>
+        (strengthMap[a.sign.id]?.strength ?? 0) -
+        (strengthMap[b.sign.id]?.strength ?? 0),
+    );
 
   const weakQuota = Math.ceil(questionCount * 0.4);
   const recentQuota = Math.ceil(questionCount * 0.35);
@@ -116,6 +125,17 @@ function pickDailyPrompts(input: {
     takeUpTo(anchor, 1);
   }
   takeUpTo(filler, questionCount - selected.length);
+  // If anti-farm filtered too hard, fill from all media by weakest.
+  if (selected.length < questionCount) {
+    takeUpTo(
+      [...media].sort(
+        (a, b) =>
+          (strengthMap[a.sign.id]?.strength ?? 0) -
+          (strengthMap[b.sign.id]?.strength ?? 0),
+      ),
+      questionCount - selected.length,
+    );
+  }
 
   return selected.slice(0, questionCount);
 }
