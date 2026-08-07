@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   faceSheen: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
   },
   starsBadge: {
     position: 'absolute',

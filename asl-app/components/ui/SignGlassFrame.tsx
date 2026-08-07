@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
     height: '42%',
   },
   content: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
   },
