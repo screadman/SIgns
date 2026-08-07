@@ -132,7 +132,7 @@ export function PathNode({
                 : accessibilityLabel
           }
           accessibilityState={{ disabled: isLocked || !onPress }}
-          style={({ pressed }) => [
+          style={[
             styles.puck,
             {
               width: diameter,
@@ -140,7 +140,6 @@ export function PathNode({
               borderRadius: diameter / 2,
               backgroundColor: deep,
             },
-            pressed && !isLocked && onPress && styles.pressed,
             isCurrent && !isLocked && styles.puckCurrent,
           ]}
         >

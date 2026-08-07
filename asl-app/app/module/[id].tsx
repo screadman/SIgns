@@ -84,7 +84,7 @@ function SignGridCard({
       accessibilityLabel={`${lesson.title}${isCompleted ? ', completed' : ''}${
         isFavorite ? ', favorite' : ''
       }`}
-      style={({ pressed }) => [styles.signCard, pressed && styles.pressed]}
+      style={styles.signCard}
     >
       <SignGlassFrame style={styles.signMedia}>
         {hasImage && imageSource ? (
@@ -328,10 +328,9 @@ export default function ModuleScreen() {
             onPress={() => setBrowseMode((value) => !value)}
             accessibilityRole="button"
             accessibilityLabel={browseMode ? 'Show learning path' : 'Search and browse'}
-            style={({ pressed }) => [
+            style={[
               styles.modeChip,
               browseMode && styles.modeChipActive,
-              pressed && styles.pressed,
             ]}
           >
             <Ionicons
@@ -509,10 +508,12 @@ const styles = StyleSheet.create({
   },
   signCard: {
     width: '31%',
-    flexGrow: 1,
+    flexBasis: '31%',
+    flexGrow: 0,
     maxWidth: '32%',
   },
   signMedia: {
+    width: '100%',
     aspectRatio: 1,
     borderRadius: borderRadius.lg,
   },
