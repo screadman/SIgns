@@ -1,0 +1,16 @@
+{
+  "name": "signs-hand-landmarker",
+  "version": "1.0.0",
+  "description": "On-device MediaPipe Hands for SIGNS Practice Mirror (dev builds).",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {},
+  "keywords": ["expo", "mediapipe", "hands"],
+  "author": "SIGNS",
+  "license": "MIT",
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}

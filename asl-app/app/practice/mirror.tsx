@@ -30,9 +30,7 @@ import {
   spacing,
 } from '../../constants/theme';
 import { hasLetterTemplate } from '../../lib/aslHandMatch';
-import { initHandFrameProcessor } from '../../lib/handFrameProcessor';
 import { useHandTracking } from '../../lib/handTracking';
-import { subscribeHandLandmarks } from '../../lib/mediapipeHands';
 import { getLessonImageSource } from '../../lib/signImages';
 import {
   PARAMETER_LABELS,
@@ -86,18 +84,24 @@ function inferHandOrientation(input: {
   return 'upright';
 }
 
-/** Lazy VisionCamera path so Expo Go never loads the native module. */
+/** Lazy LiveHandCamera so Expo Go never evaluates the landmarker import path hard. */
 function DevBuildCamera({
   onLandmarks,
+  active,
 }: {
   onLandmarks: (points: import('../../lib/aslHandMatch').HandLandmark[] | null) => void;
+  active: boolean;
 }) {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { VisionHandCamera } =
-      require('../../components/practice/VisionHandCamera') as typeof import('../../components/practice/VisionHandCamera');
+    const { LiveHandCamera } =
+      require('../../components/practice/LiveHandCamera') as typeof import('../../components/practice/LiveHandCamera');
     return (
-      <VisionHandCamera style={styles.camera} onLandmarks={onLandmarks} />
+      <LiveHandCamera
+        style={styles.camera}
+        onLandmarks={onLandmarks}
+        active={active}
+      />
     );
   } catch {
     return <CameraView style={styles.camera} facing="front" />;
@@ -110,7 +114,6 @@ export default function PracticeMirrorScreen() {
   const lessonIdParam = getParam(params.lessonId);
   const [permission, requestPermission] = useCameraPermissions();
   const [phase, setPhase] = useState<GuidePhase>('align');
-  const [nativeNote, setNativeNote] = useState<string | null>(null);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const lesson = useMemo(() => {
@@ -145,25 +148,6 @@ export default function PracticeMirrorScreen() {
     guideOrientation === 'sideways'
       ? 'Hold your hand sideways in this wide frame, like the model.'
       : 'Hold your hand upright in this wide frame, like the model.';
-
-  useEffect(() => {
-    let active = true;
-    if (!tracking.isDevBuild) {
-      return;
-    }
-    void initHandFrameProcessor().then((bridge) => {
-      if (active) {
-        setNativeNote(bridge.note);
-      }
-    });
-    const unsubscribe = subscribeHandLandmarks((points) => {
-      tracking.reportLandmarks(points);
-    });
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, [tracking.isDevBuild, tracking.reportLandmarks]);
 
   // Guided flow timers (Phase 1). Live match can skip ahead when score is high.
   useEffect(() => {
@@ -232,13 +216,13 @@ export default function PracticeMirrorScreen() {
         return `Hand seen. Shape it like ${lesson.sign.label}.`;
       }
       if (!tracking.inFrame) {
-        return 'Place your hand inside the oval.';
+        return 'Place your hand inside the frame.';
       }
       return 'Hold steady while we check the handshape.';
     }
 
     if (phase === 'align') {
-      return 'Place your signing hand inside the oval.';
+      return 'Place your signing hand inside the frame.';
     }
     if (phase === 'hold') {
       return 'Hold steady. Compare your shape to the model.';
@@ -264,7 +248,10 @@ export default function PracticeMirrorScreen() {
           </Text>
         </View>
       ) : tracking.isDevBuild ? (
-        <DevBuildCamera onLandmarks={tracking.reportLandmarks} />
+        <DevBuildCamera
+          onLandmarks={tracking.reportLandmarks}
+          active={canLiveMatch && phase !== 'done'}
+        />
       ) : !permission?.granted ? (
         <View style={styles.cameraFallback}>
           <Pressable
@@ -360,13 +347,13 @@ export default function PracticeMirrorScreen() {
             {lesson.sign.tip}
           </Text>
 
-          {nativeNote && tracking.isDevBuild ? (
+          {tracking.isDevBuild && !tracking.landmarkerReady ? (
             <Text style={styles.devNote} numberOfLines={2}>
-              {nativeNote}
+              Live match needs an EAS development build with SignsHandLandmarker.
             </Text>
           ) : null}
 
-          {phase === 'align' ? (
+          {phase === 'align' && tracking.mode !== 'live' ? (
             <Pressable
               style={styles.cta}
               onPress={() => setPhase('hold')}

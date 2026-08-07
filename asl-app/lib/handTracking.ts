@@ -1,6 +1,6 @@
+import Constants from 'expo-constants';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
-import Constants from 'expo-constants';
 
 import {
   handInGuideFrame,
@@ -8,6 +8,7 @@ import {
   type HandLandmark,
   type LetterMatchResult,
 } from './aslHandMatch';
+import { isHandLandmarkerAvailable } from 'signs-hand-landmarker';
 
 export type HandTrackingMode = 'unavailable' | 'guided-only' | 'live';
 
@@ -18,10 +19,10 @@ export type HandTrackingState = {
   match: LetterMatchResult | null;
   /** True when running inside a custom development build (not Expo Go). */
   isDevBuild: boolean;
+  landmarkerReady: boolean;
 };
 
 function detectDevBuild(): boolean {
-  // Expo Go app ownership is "expo"; standalone / dev clients differ.
   const ownership = Constants.appOwnership;
   if (ownership === 'expo') {
     return false;
@@ -31,19 +32,22 @@ function detectDevBuild(): boolean {
 
 /**
  * Hand tracking facade.
- * Live landmark feeding is wired from VisionCamera frame processors in a
- * development build. Expo Go stays on guided-only mode.
+ * Live mode requires a development build with the SignsHandLandmarker native module.
  */
 export function useHandTracking(letterId: string | null): HandTrackingState & {
   reportLandmarks: (points: HandLandmark[] | null) => void;
 } {
   const isDevBuild = detectDevBuild();
   const [landmarks, setLandmarks] = useState<HandLandmark[] | null>(null);
+  const [landmarkerReady, setLandmarkerReady] = useState(false);
   const lastReport = useRef(0);
+
+  useEffect(() => {
+    setLandmarkerReady(isDevBuild && isHandLandmarkerAvailable());
+  }, [isDevBuild]);
 
   const reportLandmarks = useCallback((points: HandLandmark[] | null) => {
     const now = Date.now();
-    // Throttle UI updates (~10 fps).
     if (now - lastReport.current < 100) {
       return;
     }
@@ -55,7 +59,8 @@ export function useHandTracking(letterId: string | null): HandTrackingState & {
     setLandmarks(null);
   }, [letterId]);
 
-  const mode: HandTrackingMode = isDevBuild ? 'live' : 'guided-only';
+  const mode: HandTrackingMode =
+    isDevBuild && landmarkerReady ? 'live' : 'guided-only';
   const inFrame = landmarks ? handInGuideFrame(landmarks) : false;
   const match =
     letterId && landmarks
@@ -70,10 +75,11 @@ export function useHandTracking(letterId: string | null): HandTrackingState & {
     inFrame,
     match,
     isDevBuild,
+    landmarkerReady,
     reportLandmarks,
   };
 }
 
 export function isHandTrackingLiveAvailable(): boolean {
-  return detectDevBuild();
+  return detectDevBuild() && isHandLandmarkerAvailable();
 }

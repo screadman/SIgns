@@ -29,10 +29,9 @@ type VisionHandCameraProps = {
 };
 
 /**
- * Development-build camera path using VisionCamera.
- * MediaPipe Hands frame processor plugs in here once the native plugin is linked
- * via `eas build --profile development`. Until then, the camera preview still
- * runs and Mirror keeps the Face ID guide + alphabet matcher ready.
+ * Optional VisionCamera preview for future frame-processor work.
+ * Practice Mirror live matching uses LiveHandCamera (expo-camera + MediaPipe
+ * snapshot landmarker) instead.
  */
 export function VisionHandCamera({ style, onLandmarks }: VisionHandCameraProps) {
   const { hasPermission, requestPermission } = useCameraPermission();
