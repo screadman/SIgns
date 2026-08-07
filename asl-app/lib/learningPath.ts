@@ -1,8 +1,9 @@
 import {
-  ALPHABET_UNITS,
-  getCurrentAlphabetLetter,
+  getCurrentUnitLesson,
+  getUnitsForModule,
   isUnitComplete,
-} from '../constants/alphabetUnits';
+  moduleUsesUnitPath,
+} from '../constants/moduleUnits';
 import {
   LEARNING_MODULES,
   getFirstPracticeLesson,
@@ -133,10 +134,11 @@ export function getModulePathState(
   };
 }
 
-function getAlphabetUnitPathState(
+function getModuleUnitPathState(
   module: LearningModule,
   completedIds: string[],
 ): LessonPathState {
+  const units = getUnitsForModule(module.id);
   const completed = module.lessons.filter((lesson) =>
     completedIds.includes(lesson.id),
   ).length;
@@ -144,17 +146,17 @@ function getAlphabetUnitPathState(
   const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
   const left = Math.max(0, total - completed);
 
-  let currentUnitIndex = ALPHABET_UNITS.findIndex(
+  let currentUnitIndex = units.findIndex(
     (unit) => !isUnitComplete(unit, completedIds),
   );
   if (currentUnitIndex < 0) {
-    currentUnitIndex = Math.max(0, ALPHABET_UNITS.length - 1);
+    currentUnitIndex = Math.max(0, units.length - 1);
   }
 
   const bubbleLabel: 'START' | 'CONTINUE' =
     completed === 0 ? 'START' : 'CONTINUE';
 
-  const nodes: LessonPathNode[] = ALPHABET_UNITS.map((unit, index) => {
+  const nodes: LessonPathNode[] = units.map((unit, index) => {
     const unitDone = isUnitComplete(unit, completedIds);
     let state: PathNodeState = 'upcoming';
     let locked = false;
@@ -193,7 +195,7 @@ function getAlphabetUnitPathState(
     });
   }
 
-  const currentLesson = getCurrentAlphabetLetter(completedIds);
+  const currentLesson = getCurrentUnitLesson(module.id, completedIds);
 
   return {
     nodes,
@@ -211,8 +213,8 @@ export function getLessonPathState(
   module: LearningModule,
   completedIds: string[],
 ): LessonPathState {
-  if (module.id === 'alphabet') {
-    return getAlphabetUnitPathState(module, completedIds);
+  if (moduleUsesUnitPath(module.id) && getUnitsForModule(module.id).length > 0) {
+    return getModuleUnitPathState(module, completedIds);
   }
 
   const lessons = module.lessons;

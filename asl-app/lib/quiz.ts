@@ -76,11 +76,11 @@ export function buildQuestionsFromPrompts(
 }
 
 /**
- * Mixed mastery session for one alphabet unit:
- * ~2 MCQ prompts per letter (cap 10-12), letter↔sign formats only,
+ * Mixed mastery session for one module unit (Alphabet letters or Numbers):
+ * ~2 MCQ prompts per sign (cap 10-12), image↔label formats only,
  * plus a 4-pair matching set for the UI phase.
  */
-export function generateAlphabetUnitSession(unitLessons: Lesson[]): {
+export function generateModuleUnitSession(unitLessons: Lesson[]): {
   questions: QuizQuestion[];
   matchingLessons: Lesson[];
 } {
@@ -138,6 +138,9 @@ export function generateAlphabetUnitSession(unitLessons: Lesson[]): {
 
   return { questions, matchingLessons };
 }
+
+/** @deprecated Prefer generateModuleUnitSession. */
+export const generateAlphabetUnitSession = generateModuleUnitSession;
 
 export function generateQuiz(
   lessonId: string,

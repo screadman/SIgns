@@ -689,10 +689,15 @@ export async function saveQuizResult(
     await saveBestModuleStars(moduleId, stars);
     await saveBestLessonStars(lessonId, stars);
   } else if (lessonId.startsWith('unit-')) {
-    // Letter completion is handled in the unit session screen before results.
+    // Sign completion is handled in the unit session screen before results.
     await saveBestLessonStars(lessonId, stars);
-    if (lessonId.includes('alphabet')) {
+    const unitKey = lessonId.replace(/^unit-/, '');
+    if (unitKey.startsWith('alphabet')) {
       await saveBestModuleStars('alphabet', stars);
+    } else if (unitKey.startsWith('numbers')) {
+      await saveBestModuleStars('numbers', stars);
+    } else if (unitKey.startsWith('conversation')) {
+      await saveBestModuleStars('conversation', stars);
     }
   }
   await addStars(stars);

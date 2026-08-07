@@ -26,13 +26,14 @@ import {
   type LearningPathItem,
 } from '../../components/ui';
 import {
-  getAlphabetUnitForLesson,
-  isAlphabetUnitUnlocked,
-} from '../../constants/alphabetUnits';
-import {
   getLearningModule,
   type Lesson,
 } from '../../constants/learning';
+import {
+  getModuleUnitForLesson,
+  isModuleUnitUnlocked,
+  moduleUsesUnitPath,
+} from '../../constants/moduleUnits';
 import {
   borderRadius,
   borderWidth,
@@ -256,13 +257,15 @@ export default function ModuleScreen() {
     }
 
     if (node.kind === 'unit' && node.unitId) {
+      const unitIcon =
+        module.id === 'numbers' ? 'apps-outline' : 'text';
       return {
         id: node.id,
         state: node.state,
         label: node.label,
         icon: (node.state === 'done'
           ? 'checkmark'
-          : 'text') as LearningPathItem['icon'],
+          : unitIcon) as LearningPathItem['icon'],
         progressPercent: node.state === 'done' ? 100 : isCurrent ? 35 : 0,
         accentColor: module.color,
         stars: resolveLessonDisplayStars(
@@ -366,10 +369,10 @@ export default function ModuleScreen() {
               <View style={styles.grid}>
                 {filteredLessons.map((lesson) => {
                   let locked = false;
-                  if (module.id === 'alphabet') {
-                    const unit = getAlphabetUnitForLesson(lesson.id);
+                  if (moduleUsesUnitPath(module.id)) {
+                    const unit = getModuleUnitForLesson(lesson.id);
                     locked = unit
-                      ? !isAlphabetUnitUnlocked(unit.id, completedLessonIds)
+                      ? !isModuleUnitUnlocked(unit.id, completedLessonIds)
                       : true;
                   } else {
                     const pathNode = lessonPath.nodes.find(

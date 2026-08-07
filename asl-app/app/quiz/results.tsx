@@ -173,7 +173,10 @@ export default function QuizResultsScreen() {
     }
 
     if (isUnit) {
-      router.replace('/module/alphabet' as Href);
+      const fallbackModuleId = bossModuleId || 'alphabet';
+      router.replace(
+        (`/module/${unitModule?.id ?? fallbackModuleId}`) as Href,
+      );
       return;
     }
 
@@ -327,7 +330,7 @@ export default function QuizResultsScreen() {
             <PrimaryButton
               title={
                 isUnit
-                  ? 'Back to Alphabet'
+                  ? `Back to ${unitModule?.title ?? 'module'}`
                   : isDaily || isMissed || isBoss
                     ? 'Back to Home'
                     : 'Play again'

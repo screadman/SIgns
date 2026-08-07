@@ -19,12 +19,12 @@ import {
   SignGlassFrame,
 } from '../../../components/ui';
 import {
-  getAlphabetUnit,
+  getModuleUnit,
   getUnitLessons,
-  isAlphabetUnitUnlocked,
+  isModuleUnitUnlocked,
   unitQuizResultId,
-} from '../../../constants/alphabetUnits';
-import type { Lesson } from '../../../constants/learning';
+} from '../../../constants/moduleUnits';
+import { getLearningModule, type Lesson } from '../../../constants/learning';
 import {
   borderRadius,
   borderWidth,
@@ -36,7 +36,7 @@ import {
   spacing,
 } from '../../../constants/theme';
 import {
-  generateAlphabetUnitSession,
+  generateModuleUnitSession,
   getQuizStars,
   getQuizXp,
   shuffle,
@@ -169,11 +169,26 @@ function AnswerButton({
   );
 }
 
-export default function AlphabetUnitQuizScreen() {
+export default function ModuleUnitQuizScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ unitId?: string | string[] }>();
   const unitId = getParam(params.unitId);
-  const unit = getAlphabetUnit(unitId);
+  const unit = getModuleUnit(unitId);
+  const learningModule = unit ? getLearningModule(unit.moduleId) : undefined;
+  const moduleHref = (`/module/${unit?.moduleId ?? 'alphabet'}`) as Href;
+  const moduleTitle = learningModule?.title ?? 'module';
+  const signNoun =
+    unit?.moduleId === 'numbers'
+      ? 'number'
+      : unit?.moduleId === 'conversation'
+        ? 'sign'
+        : 'letter';
+  const signNounPlural =
+    unit?.moduleId === 'numbers'
+      ? 'numbers'
+      : unit?.moduleId === 'conversation'
+        ? 'signs'
+        : 'letters';
 
   const [ready, setReady] = useState(false);
   const [lockedOut, setLockedOut] = useState(false);
@@ -207,7 +222,7 @@ export default function AlphabetUnitQuizScreen() {
       }
 
       const completed = await getCompletedLessons();
-      if (!isAlphabetUnitUnlocked(unit.id, completed)) {
+      if (!isModuleUnitUnlocked(unit.id, completed)) {
         if (active) {
           setLockedOut(true);
           setReady(true);
@@ -216,7 +231,7 @@ export default function AlphabetUnitQuizScreen() {
       }
 
       const lessons = getUnitLessons(unit);
-      const session = generateAlphabetUnitSession(lessons);
+      const session = generateModuleUnitSession(lessons);
       if (active) {
         setQuestions(session.questions);
         setMatchingLessons(session.matchingLessons);
@@ -269,7 +284,7 @@ export default function AlphabetUnitQuizScreen() {
         await saveBestLessonStars(lessonId, Math.max(1, earnedStars));
       }
       await saveBestLessonStars(unitQuizResultId(unit), earnedStars);
-      await saveBestModuleStars('alphabet', earnedStars);
+      await saveBestModuleStars(unit.moduleId, earnedStars);
     }
 
     const resultId = `${unitQuizResultId(unit)}-${Date.now()}`;
@@ -291,9 +306,9 @@ export default function AlphabetUnitQuizScreen() {
         stars: String(earnedStars),
         resultId,
         source: 'unit',
-        moduleId: 'alphabet',
+        moduleId: unit.moduleId,
         missed: missedLessonIds.join(','),
-        continueTo: '/module/alphabet',
+        continueTo: `/module/${unit.moduleId}`,
       },
     } as Href);
   }
@@ -423,14 +438,14 @@ export default function AlphabetUnitQuizScreen() {
           </Text>
           <Text style={styles.notFoundBody}>
             {lockedOut
-              ? 'Finish the previous alphabet unit first.'
-              : 'Need enough illustrated letters in this unit.'}
+              ? `Finish the previous ${moduleTitle} unit first.`
+              : `Need enough illustrated ${signNounPlural} in this unit.`}
           </Text>
           <Pressable
-            onPress={() => router.replace('/module/alphabet' as Href)}
+            onPress={() => router.replace(moduleHref)}
             style={styles.backLink}
           >
-            <Text style={styles.backLinkText}>Back to Alphabet</Text>
+            <Text style={styles.backLinkText}>Back to {moduleTitle}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -444,7 +459,7 @@ export default function AlphabetUnitQuizScreen() {
           <SessionHeader
             progress={progressRatio}
             lives={lives}
-            onBack={() => router.replace('/module/alphabet' as Href)}
+            onBack={() => router.replace(moduleHref)}
           />
 
           <ScrollView
@@ -452,7 +467,8 @@ export default function AlphabetUnitQuizScreen() {
             showsVerticalScrollIndicator={false}
           >
             <Text style={styles.matchInstructions}>
-              Match each sign to its letter. Tap a picture, then a letter.
+              Match each sign to its {signNoun}. Tap a picture, then a{' '}
+              {signNoun}.
             </Text>
 
             <Text style={styles.columnTitle}>Signs</Text>
@@ -497,7 +513,9 @@ export default function AlphabetUnitQuizScreen() {
               })}
             </View>
 
-            <Text style={styles.columnTitle}>Letters</Text>
+            <Text style={styles.columnTitle}>
+              {signNounPlural.charAt(0).toUpperCase() + signNounPlural.slice(1)}
+            </Text>
             <View style={styles.labelGrid}>
               {matchingLabels.map((lesson) => {
                 const matched = matchedIds.includes(lesson.id);
@@ -551,10 +569,10 @@ export default function AlphabetUnitQuizScreen() {
         <View style={styles.notFound}>
           <Text style={styles.notFoundTitle}>Quiz unavailable</Text>
           <Pressable
-            onPress={() => router.replace('/module/alphabet' as Href)}
+            onPress={() => router.replace(moduleHref)}
             style={styles.backLink}
           >
-            <Text style={styles.backLinkText}>Back to Alphabet</Text>
+            <Text style={styles.backLinkText}>Back to {moduleTitle}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -575,7 +593,7 @@ export default function AlphabetUnitQuizScreen() {
         <SessionHeader
           progress={progressRatio}
           lives={lives}
-          onBack={() => router.replace('/module/alphabet' as Href)}
+          onBack={() => router.replace(moduleHref)}
         />
 
         <ScrollView
@@ -602,7 +620,7 @@ export default function AlphabetUnitQuizScreen() {
 
           <Text style={styles.question}>
             {currentQuestion.format === 'image-to-label'
-              ? 'What letter is this?'
+              ? `What ${signNoun} is this?`
               : `Which sign matches ${currentQuestion.prompt.sign.label}?`}
           </Text>
 
