@@ -156,8 +156,8 @@ export function handInGuideFrame(landmarks: HandLandmark[]): boolean {
   const maxY = Math.max(...ys);
   const cx = (minX + maxX) / 2;
   const cy = (minY + maxY) / 2;
-  // Normalized coords: guide oval roughly center of frame.
-  return cx > 0.28 && cx < 0.72 && cy > 0.22 && cy < 0.82;
+  // Normalized coords: large center signing zone (wide frame).
+  return cx > 0.12 && cx < 0.88 && cy > 0.18 && cy < 0.78;
 }
 
 export function hasLetterTemplate(letterId: string): boolean {

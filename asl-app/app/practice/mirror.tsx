@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { HandGuideOverlay } from '../../components/practice/HandGuideOverlay';
+import type { HandGuideOrientation } from '../../components/practice/HandGuideOverlay';
 import { GlassBackButton, LearningBottomNav } from '../../components/ui';
 import {
   LEARNING_MODULES,
@@ -53,6 +54,37 @@ const ABSOLUTE_FILL = {
   bottom: 0,
   left: 0,
 };
+
+/** Letters / tips that are usually shown with a sideways hand. */
+const SIDEWAYS_LETTER_IDS = new Set([
+  'g',
+  'h',
+  'p',
+  'q',
+]);
+
+function inferHandOrientation(input: {
+  letterId: string | null;
+  tip: string;
+  description: string;
+  handshape: string;
+}): HandGuideOrientation {
+  if (input.letterId && SIDEWAYS_LETTER_IDS.has(input.letterId)) {
+    return 'sideways';
+  }
+  const text =
+    `${input.tip} ${input.description} ${input.handshape}`.toLowerCase();
+  if (
+    text.includes('sideways') ||
+    text.includes('horizontal') ||
+    text.includes('pointing sideways') ||
+    text.includes('point left') ||
+    text.includes('point right')
+  ) {
+    return 'sideways';
+  }
+  return 'upright';
+}
 
 /** Lazy VisionCamera path so Expo Go never loads the native module. */
 function DevBuildCamera({
@@ -101,6 +133,18 @@ export default function PracticeMirrorScreen() {
   const paramsResolved = lesson
     ? resolveSignParameters(lesson.sign)
     : null;
+  const guideOrientation = lesson
+    ? inferHandOrientation({
+        letterId,
+        tip: lesson.sign.tip,
+        description: lesson.sign.description,
+        handshape: paramsResolved?.handshape ?? '',
+      })
+    : 'upright';
+  const guideHint =
+    guideOrientation === 'sideways'
+      ? 'Hold your hand sideways in this wide frame, like the model.'
+      : 'Hold your hand upright in this wide frame, like the model.';
 
   useEffect(() => {
     let active = true;
@@ -239,6 +283,12 @@ export default function PracticeMirrorScreen() {
       <HandGuideOverlay
         pulse={phase === 'align' || (tracking.mode === 'live' && !tracking.inFrame)}
         active={guideActive}
+        orientation={guideOrientation}
+        hint={
+          phase === 'align' || phase === 'hold'
+            ? guideHint
+            : 'Match the model handshape, then confirm.'
+        }
       />
 
       <SafeAreaView style={styles.overlaySafe} edges={['top', 'left', 'right']}>
