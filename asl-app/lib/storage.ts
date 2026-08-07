@@ -253,28 +253,50 @@ export async function recordDailyChallengeProgress(
     claimedRewards: [...current.claimedRewards],
   };
 
-  let rewardXp = 0;
-
-  for (const challenge of DAILY_CHALLENGES) {
-    const progress = updated[challenge.id];
-    const alreadyClaimed = updated.claimedRewards.includes(challenge.id);
-
-    if (!alreadyClaimed && progress >= challenge.target) {
-      updated.claimedRewards.push(challenge.id);
-      rewardXp += challenge.rewardXp;
-    }
-  }
-
-  if (rewardXp > 0) {
-    await addXP(rewardXp);
-  }
-
+  // Progress only. Rewards are claimed manually on the Challenges screen.
   await AsyncStorage.setItem(
     dailyChallengeStorageKey(),
     JSON.stringify(updated),
   );
 
   return updated;
+}
+
+export async function claimDailyChallengeReward(challengeId: string): Promise<{
+  progress: DailyChallengeProgress;
+  awardedXp: number;
+  awardedGems: number;
+} | null> {
+  const challenge = DAILY_CHALLENGES.find((item) => item.id === challengeId);
+  if (!challenge) {
+    return null;
+  }
+
+  const current = await getDailyChallengeProgress();
+  const progressValue = current[challenge.id];
+  const alreadyClaimed = current.claimedRewards.includes(challenge.id);
+
+  if (alreadyClaimed || progressValue < challenge.target) {
+    return null;
+  }
+
+  const updated: DailyChallengeProgress = {
+    ...current,
+    claimedRewards: [...current.claimedRewards, challenge.id],
+  };
+
+  await AsyncStorage.setItem(
+    dailyChallengeStorageKey(),
+    JSON.stringify(updated),
+  );
+  await addXP(challenge.rewardXp);
+  await addStars(challenge.rewardGems);
+
+  return {
+    progress: updated,
+    awardedXp: challenge.rewardXp,
+    awardedGems: challenge.rewardGems,
+  };
 }
 
 export async function getStars(): Promise<number> {

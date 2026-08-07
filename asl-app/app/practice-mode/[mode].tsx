@@ -32,6 +32,7 @@ import {
   spacing,
 } from '../../constants/theme';
 import {
+  claimDailyChallengeReward,
   getDailyChallengeProgress,
   type DailyChallengeProgress,
 } from '../../lib/storage';
@@ -86,36 +87,91 @@ function ChallengeCard({
   challenge,
   progress,
   claimed,
+  claiming,
+  onClaim,
 }: {
   challenge: DailyChallengeDef;
   progress: number;
   claimed: boolean;
+  claiming: boolean;
+  onClaim: () => void;
 }) {
   const clamped = Math.min(progress, challenge.target);
   const ratio = challenge.target === 0 ? 0 : clamped / challenge.target;
   const complete = clamped >= challenge.target;
+  const claimable = complete && !claimed;
 
   return (
     <View style={styles.challengeCard}>
       <Text style={styles.challengeTitle}>{challenge.title}</Text>
       <View style={styles.challengeRow}>
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${ratio * 100}%` }]} />
-          <Text style={styles.progressLabel}>
+        <View
+          style={styles.progressTrack}
+          accessible
+          accessibilityRole="progressbar"
+          accessibilityValue={{
+            min: 0,
+            max: challenge.target,
+            now: clamped,
+          }}
+        >
+          <View
+            style={[
+              styles.progressFill,
+              {
+                width: `${Math.max(0, Math.min(1, ratio)) * 100}%`,
+                backgroundColor: claimed
+                  ? colors.success
+                  : claimable
+                    ? colors.warning
+                    : colors.primary,
+              },
+            ]}
+          />
+          <Text
+            style={[
+              styles.progressLabel,
+              ratio > 0.45 && styles.progressLabelOnFill,
+            ]}
+          >
             {clamped}/{challenge.target}
           </Text>
         </View>
-        <View style={styles.rewardChip}>
-          <Ionicons
-            name={claimed || complete ? 'checkmark-circle' : 'flash'}
-            size={16}
-            color={claimed || complete ? colors.success : colors.warning}
-          />
-          <Text style={styles.rewardText}>
-            {claimed ? 'Claimed' : `${challenge.rewardXp} XP`}
-          </Text>
-        </View>
+
+        {claimed ? (
+          <View style={styles.rewardChip}>
+            <Ionicons
+              name="checkmark-circle"
+              size={16}
+              color={colors.success}
+            />
+            <Text style={styles.rewardText}>Claimed</Text>
+          </View>
+        ) : claimable ? (
+          <Pressable
+            onPress={onClaim}
+            disabled={claiming}
+            accessibilityRole="button"
+            accessibilityLabel={`Claim ${challenge.rewardGems} gems`}
+            style={[styles.claimButton, claiming && styles.claimButtonDisabled]}
+          >
+            <Ionicons name="diamond" size={14} color={colors.white} />
+            <Text style={styles.claimButtonText}>
+              {claiming ? '…' : `Claim +${challenge.rewardGems}`}
+            </Text>
+          </Pressable>
+        ) : (
+          <View style={styles.rewardChip}>
+            <Ionicons name="diamond" size={16} color={colors.gem} />
+            <Text style={styles.rewardText}>+{challenge.rewardGems}</Text>
+          </View>
+        )}
       </View>
+      {claimable ? (
+        <Text style={styles.claimHint}>
+          Goal done. Claim your gems (+{challenge.rewardXp} XP too).
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -130,6 +186,8 @@ export default function PracticeModeScreen() {
     correctAnswers: 0,
     claimedRewards: [],
   });
+  const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [claimToast, setClaimToast] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -161,6 +219,25 @@ export default function PracticeModeScreen() {
       };
     }, []),
   );
+
+  async function handleClaimChallenge(challengeId: string) {
+    if (claimingId) {
+      return;
+    }
+    setClaimingId(challengeId);
+    try {
+      const result = await claimDailyChallengeReward(challengeId);
+      if (result) {
+        setDailyProgress(result.progress);
+        setClaimToast(
+          `+${result.awardedGems} gems · +${result.awardedXp} XP`,
+        );
+        setTimeout(() => setClaimToast(null), 2200);
+      }
+    } finally {
+      setClaimingId(null);
+    }
+  }
 
   if (!mode) {
     return (
@@ -468,9 +545,19 @@ export default function PracticeModeScreen() {
                     claimed={dailyProgress.claimedRewards.includes(
                       challenge.id,
                     )}
+                    claiming={claimingId === challenge.id}
+                    onClaim={() => {
+                      void handleClaimChallenge(challenge.id);
+                    }}
                   />
                 ))}
               </View>
+              {claimToast ? (
+                <View style={styles.claimToast}>
+                  <Ionicons name="diamond" size={16} color={colors.gem} />
+                  <Text style={styles.claimToastText}>{claimToast}</Text>
+                </View>
+              ) : null}
             </>
           ) : (
             <View style={styles.comingSoon}>
@@ -610,7 +697,8 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: colors.primarySurface,
+    minWidth: 0,
+    backgroundColor: colors.primary,
     borderRadius: borderRadius.full,
   },
   progressLabel: {
@@ -618,6 +706,10 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontFamily: fontFamily.bodySemibold,
     fontSize: fontSize.sm,
+    zIndex: 1,
+  },
+  progressLabelOnFill: {
+    color: colors.white,
   },
   rewardChip: {
     flexDirection: 'row',
@@ -626,6 +718,44 @@ const styles = StyleSheet.create({
     minWidth: 72,
   },
   rewardText: {
+    color: colors.text,
+    fontFamily: fontFamily.bodySemibold,
+    fontSize: fontSize.sm,
+  },
+  claimButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minHeight: 36,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary,
+  },
+  claimButtonDisabled: {
+    opacity: 0.6,
+  },
+  claimButtonText: {
+    color: colors.white,
+    fontFamily: fontFamily.heading,
+    fontSize: fontSize.xs,
+  },
+  claimHint: {
+    marginTop: spacing.xs,
+    color: colors.warning,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: fontSize.xs,
+  },
+  claimToast: {
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    minHeight: 40,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primarySurface,
+  },
+  claimToastText: {
     color: colors.text,
     fontFamily: fontFamily.bodySemibold,
     fontSize: fontSize.sm,
