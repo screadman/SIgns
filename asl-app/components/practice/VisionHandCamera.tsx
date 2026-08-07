@@ -15,6 +15,14 @@ import {
 } from '../../constants/theme';
 import type { HandLandmark } from '../../lib/aslHandMatch';
 
+const ABSOLUTE_FILL = {
+  position: 'absolute' as const,
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+};
+
 type VisionHandCameraProps = {
   style?: object;
   onLandmarks?: (points: HandLandmark[] | null) => void;
@@ -74,10 +82,10 @@ export function VisionHandCamera({ style, onLandmarks }: VisionHandCameraProps) 
 
 const styles = StyleSheet.create({
   camera: {
-    ...StyleSheet.absoluteFill,
+    ...ABSOLUTE_FILL,
   },
   fallback: {
-    ...StyleSheet.absoluteFill,
+    ...ABSOLUTE_FILL,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceMuted,

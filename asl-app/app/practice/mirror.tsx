@@ -46,6 +46,14 @@ type GuidePhase = 'align' | 'hold' | 'compare' | 'done';
 
 const HOLD_MS = 1800;
 
+const ABSOLUTE_FILL = {
+  position: 'absolute' as const,
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+};
+
 /** Lazy VisionCamera path so Expo Go never loads the native module. */
 function DevBuildCamera({
   onLandmarks,
@@ -352,10 +360,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.black,
   },
   camera: {
-    ...StyleSheet.absoluteFill,
+    ...ABSOLUTE_FILL,
   },
   cameraFallback: {
-    ...StyleSheet.absoluteFill,
+    ...ABSOLUTE_FILL,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceMuted,

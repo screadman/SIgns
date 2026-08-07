@@ -4,6 +4,14 @@ import Svg, { Ellipse, Path } from 'react-native-svg';
 
 import { colors } from '../../constants/theme';
 
+const ABSOLUTE_FILL = {
+  position: 'absolute' as const,
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+};
+
 type HandGuideOverlayProps = {
   /** Soft pulse while the user should align their hand. */
   pulse?: boolean;
@@ -90,12 +98,12 @@ export function HandGuideOverlay({
 
 const styles = StyleSheet.create({
   root: {
-    ...StyleSheet.absoluteFill,
+    ...ABSOLUTE_FILL,
     alignItems: 'center',
     justifyContent: 'center',
   },
   vignette: {
-    ...StyleSheet.absoluteFill,
+    ...ABSOLUTE_FILL,
     backgroundColor: 'rgba(10, 16, 40, 0.28)',
   },
   frameWrap: {
