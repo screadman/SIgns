@@ -55,20 +55,18 @@ function resolveActiveKey(pathname: string) {
   if (
     pathname.includes('practice') ||
     pathname.includes('practice-mode') ||
-    pathname.includes('quiz')
+    pathname.includes('quiz') ||
+    pathname.includes('mirror') ||
+    pathname.includes('fingerspelling')
   ) {
     return 'practice';
   }
 
-  if (
-    pathname.includes('learn') ||
-    pathname.includes('module') ||
-    pathname.includes('lesson')
-  ) {
-    return 'learn';
+  if (pathname.includes('module') || pathname.includes('lesson')) {
+    return 'home';
   }
 
-  if (pathname.includes('profile')) {
+  if (pathname.includes('profile') || pathname.includes('legal')) {
     return 'profile';
   }
 
@@ -114,7 +112,7 @@ function PillTabBarContent({
                 <Ionicons
                   name={isActive ? tab.activeIcon : tab.icon}
                   size={iconSize.md}
-                  color={isActive ? colors.text : colors.textInverse}
+                  color={isActive ? colors.primary : colors.textInverse}
                 />
               </View>
             </Pressable>

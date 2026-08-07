@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Image,
   Pressable,
   ScrollView,
@@ -11,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { LearningBottomNav } from '../../components/ui';
+import { LearningBottomNav, SignGlassFrame } from '../../components/ui';
 import { LEARNING_MODULES, type Lesson } from '../../constants/learning';
 import {
   borderRadius,
@@ -23,16 +24,18 @@ import {
   opacity,
   spacing,
 } from '../../constants/theme';
+import { generateQuizPreset } from '../../lib/dailyQuiz';
 import {
-  generateQuiz,
   getQuizStars,
   getQuizXp,
   type QuizFormat,
+  type QuizQuestion,
 } from '../../lib/quiz';
 import {
   getLessonImageSource,
   lessonHasSignImage,
 } from '../../lib/signImages';
+import { recordSignAnswers } from '../../lib/signStrength';
 
 const ALL_LESSONS = LEARNING_MODULES.flatMap((module) => module.lessons);
 
@@ -56,6 +59,8 @@ function AnswerButton({
   onPress: () => void;
 }) {
   const imageSource = getLessonImageSource(lesson);
+  const showImage =
+    format === 'label-to-image' || format === 'description-to-image';
 
   return (
     <Pressable
@@ -63,18 +68,18 @@ function AnswerButton({
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={
-        format === 'image-to-label'
-          ? lesson.sign.label
-          : `ASL sign for ${lesson.sign.label}`
+        showImage
+          ? `ASL sign for ${lesson.sign.label}`
+          : lesson.sign.label
       }
       style={[
         styles.answer,
-        format === 'label-to-image' && styles.imageAnswer,
+        showImage && styles.imageAnswer,
         state === 'correct' && styles.correctAnswer,
         state === 'incorrect' && styles.incorrectAnswer,
             ]}
     >
-      {format === 'image-to-label' ? (
+      {!showImage ? (
         <Text
           style={[
             styles.answerLabel,
@@ -115,37 +120,72 @@ export default function QuizScreen() {
   }>();
   const lessonId = getParam(params.lessonId);
   const retryKey = getParam(params.retry);
-  const questions = useMemo(
-    () => generateQuiz(lessonId, ALL_LESSONS),
-    [lessonId, retryKey],
-  );
+
+  const [questions, setQuestions] = useState<QuizQuestion[] | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [selectedAnswerId, setSelectedAnswerId] = useState<string | null>(null);
   const [isFinishing, setIsFinishing] = useState(false);
+  const answerLog = useRef<
+    Array<{ signId: string; correct: boolean; lessonId: string }>
+  >([]);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    let active = true;
+    setQuestions(null);
+    setCurrentQuestionIndex(0);
+    setScore(0);
+    setLives(3);
+    setSelectedAnswerId(null);
+    setIsFinishing(false);
+    answerLog.current = [];
+
+    async function load() {
+      const built = await generateQuizPreset({
+        preset: 'module',
+        allLessons: ALL_LESSONS,
+        lessonId,
+      });
+
+      if (active) {
+        setQuestions(built);
+      }
+    }
+
+    void load();
+
+    return () => {
+      active = false;
       if (advanceTimer.current) {
         clearTimeout(advanceTimer.current);
       }
-    },
-    [],
-  );
+    };
+  }, [lessonId, retryKey]);
 
-  const currentQuestion = questions[currentQuestionIndex];
+  const currentQuestion = questions?.[currentQuestionIndex];
 
-  function finishQuiz(finalScore: number) {
-    if (isFinishing) {
+  async function finishQuiz(finalScore: number) {
+    if (isFinishing || !questions) {
       return;
     }
 
     setIsFinishing(true);
+
+    await recordSignAnswers(
+      answerLog.current.map((entry) => ({
+        signId: entry.signId,
+        correct: entry.correct,
+      })),
+    );
+
     const earnedStars = getQuizStars(finalScore, questions.length);
     const earnedXp = getQuizXp(finalScore, questions.length);
     const resultId = `${lessonId}-${Date.now()}`;
+    const missedLessonIds = answerLog.current
+      .filter((entry) => !entry.correct)
+      .map((entry) => entry.lessonId);
 
     router.replace({
       pathname: '/quiz/results',
@@ -156,34 +196,57 @@ export default function QuizScreen() {
         xp: String(earnedXp),
         stars: String(earnedStars),
         resultId,
+        source: 'module',
+        missed: missedLessonIds.join(','),
       },
     } as Href);
   }
 
   function handleAnswer(answerId: string) {
-    if (!currentQuestion || selectedAnswerId || isFinishing) {
+    if (!currentQuestion || !questions || selectedAnswerId || isFinishing) {
       return;
     }
 
     const isCorrect = answerId === currentQuestion.correctAnswerId;
     const nextScore = score + (isCorrect ? 1 : 0);
 
+    answerLog.current.push({
+      signId: currentQuestion.prompt.sign.id,
+      lessonId: currentQuestion.prompt.id,
+      correct: isCorrect,
+    });
+
     setSelectedAnswerId(answerId);
     setScore(nextScore);
 
+    let nextLives = lives;
     if (!isCorrect) {
-      setLives((currentLives) => Math.max(0, currentLives - 1));
+      nextLives = Math.max(0, lives - 1);
+      setLives(nextLives);
     }
 
     advanceTimer.current = setTimeout(() => {
-      if (currentQuestionIndex === questions.length - 1) {
-        finishQuiz(nextScore);
+      const isLastQuestion = currentQuestionIndex === questions.length - 1;
+      const outOfLives = nextLives <= 0;
+
+      if (isLastQuestion || outOfLives) {
+        void finishQuiz(nextScore);
         return;
       }
 
       setCurrentQuestionIndex((index) => index + 1);
       setSelectedAnswerId(null);
     }, isCorrect ? 900 : 1200);
+  }
+
+  if (questions === null) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.notFound}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
   }
 
   if (!currentQuestion) {
@@ -201,6 +264,11 @@ export default function QuizScreen() {
 
   const selectedIsCorrect =
     selectedAnswerId === currentQuestion.correctAnswerId;
+  const promptImage =
+    currentQuestion.format === 'image-to-label' &&
+    lessonHasSignImage(currentQuestion.prompt)
+      ? getLessonImageSource(currentQuestion.prompt)
+      : undefined;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -219,7 +287,7 @@ export default function QuizScreen() {
             {[0, 1, 2].map((heart) => (
               <Ionicons
                 key={heart}
-                name="heart-outline"
+                name={heart < lives ? 'heart' : 'heart-outline'}
                 size={22}
                 color={heart < lives ? colors.accent : colors.disabled}
               />
@@ -232,41 +300,42 @@ export default function QuizScreen() {
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          {currentQuestion.format === 'image-to-label' &&
-          lessonHasSignImage(currentQuestion.prompt) &&
-          getLessonImageSource(currentQuestion.prompt) ? (
-            <View style={styles.promptImageContainer}>
+          {promptImage ? (
+            <SignGlassFrame style={styles.promptImageContainer}>
               <Image
-                source={getLessonImageSource(currentQuestion.prompt)}
+                source={promptImage}
                 style={styles.promptImage}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors
               />
-            </View>
+            </SignGlassFrame>
           ) : (
             <View style={styles.promptLabelContainer}>
-              <Text style={styles.promptLabel}>
-                {currentQuestion.prompt.sign.label}
+              <Text
+                style={
+                  currentQuestion.format === 'description-to-image'
+                    ? styles.promptDescription
+                    : styles.promptLabel
+                }
+              >
+                {currentQuestion.format === 'description-to-image'
+                  ? currentQuestion.prompt.sign.description
+                  : currentQuestion.prompt.sign.label}
               </Text>
             </View>
           )}
 
           <Text style={styles.question}>
             {currentQuestion.format === 'image-to-label'
-              ? `What ${
-                  currentQuestion.prompt.moduleId === 'alphabet'
-                    ? 'letter'
-                    : currentQuestion.prompt.moduleId === 'numbers'
-                      ? 'number'
-                      : 'sign'
-                } is this sign?`
-              : `Which sign matches ${currentQuestion.prompt.sign.label}?`}
+              ? 'What sign is this?'
+              : currentQuestion.format === 'description-to-image'
+                ? 'Which sign matches this description?'
+                : `Which sign matches ${currentQuestion.prompt.sign.label}?`}
           </Text>
 
           <View style={styles.answerGrid}>
             {currentQuestion.options.map((option) => {
               let answerState: AnswerState = 'default';
-
               if (selectedAnswerId) {
                 if (option.id === currentQuestion.correctAnswerId) {
                   answerState = 'correct';
@@ -288,7 +357,7 @@ export default function QuizScreen() {
             })}
           </View>
 
-          {selectedAnswerId && (
+          {selectedAnswerId ? (
             <Text
               style={[
                 styles.feedback,
@@ -299,9 +368,9 @@ export default function QuizScreen() {
             >
               {selectedIsCorrect
                 ? 'Correct! +10 XP'
-                : `The correct answer is ${currentQuestion.prompt.sign.label}.`}
+                : currentQuestion.prompt.sign.tip}
             </Text>
-          )}
+          ) : null}
         </ScrollView>
       </View>
       <LearningBottomNav />
@@ -363,11 +432,7 @@ const styles = StyleSheet.create({
   promptImageContainer: {
     width: '100%',
     height: 220,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
     borderRadius: borderRadius.xl,
-    backgroundColor: colors.signSurface,
   },
   promptImage: {
     width: 200,
@@ -375,17 +440,26 @@ const styles = StyleSheet.create({
   },
   promptLabelContainer: {
     width: '100%',
-    height: 220,
+    minHeight: 220,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: borderRadius.xl,
     backgroundColor: colors.primarySurface,
+    paddingHorizontal: spacing.lg,
   },
   promptLabel: {
     color: colors.primary,
     fontFamily: fontFamily.headingExtraBold,
-    fontSize: 88,
-    lineHeight: 100,
+    fontSize: 72,
+    lineHeight: 84,
+    textAlign: 'center',
+  },
+  promptDescription: {
+    color: colors.primary,
+    fontFamily: fontFamily.heading,
+    fontSize: fontSize.lg,
+    lineHeight: lineHeight.lg,
+    textAlign: 'center',
   },
   question: {
     width: '100%',
@@ -448,12 +522,14 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     lineHeight: lineHeight.sm,
     textAlign: 'center',
+    paddingHorizontal: spacing.md,
   },
   notFound: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.xl,
+    gap: spacing.sm,
   },
   notFoundTitle: {
     color: colors.text,

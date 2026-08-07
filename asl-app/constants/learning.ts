@@ -12,6 +12,7 @@ import {
 } from './dictionaryCategories';
 import { colors } from './theme';
 import { WH_QUESTION_SIGNS } from './whQuestions';
+import { peekSignImage } from '../lib/signImages';
 
 export type LearningModuleId =
   | 'alphabet'
@@ -28,7 +29,7 @@ export type LearningModuleId =
   | 'sports';
 
 export type LearningModuleIcon =
-  | 'close-circle-outline'
+  | 'text-outline'
   | 'apps-outline'
   | 'chatbubbles-outline'
   | 'help-circle-outline'
@@ -55,7 +56,7 @@ export type LearningModule = {
   icon: LearningModuleIcon;
   color: string;
   surfaceColor: string;
-  /** Solid fill for the Dictionary grid tile. */
+  /** Solid fill for module tiles in practice pickers. */
   tileColor: string;
   /** When true, module screen uses a vertical sign list instead of letter bubbles. */
   listLayout: boolean;
@@ -119,7 +120,7 @@ export const LEARNING_MODULES: LearningModule[] = [
     id: 'alphabet',
     title: 'Alphabet',
     description: 'Learn the 26 letters of the American Sign Language alphabet.',
-    icon: 'close-circle-outline',
+    icon: 'text-outline',
     color: colors.primary,
     surfaceColor: colors.primarySurface,
     tileColor: '#F472B6',
@@ -298,21 +299,25 @@ export function getModuleLessonUnit(moduleId: LearningModuleId): string {
 }
 
 export function lessonHasQuizMedia(lesson: Lesson): boolean {
-  if (lesson.moduleId === 'alphabet' || lesson.moduleId === 'numbers') {
+  if (hasMediaAsset(lesson.sign.image)) {
     return true;
   }
 
-  return hasMediaAsset(lesson.sign.image);
+  return peekSignImage(lesson.moduleId, lesson.sign.id) !== undefined;
 }
 
+export function getModuleMediaLessons(module: LearningModule): Lesson[] {
+  return module.lessons.filter((lesson) => lessonHasQuizMedia(lesson));
+}
+
+/** Seed lesson for starting a module quiz (random among media-ready signs). */
 export function getFirstPracticeLesson(module: LearningModule): Lesson | null {
-  const mediaLessons = module.lessons.filter((lesson) =>
-    lessonHasQuizMedia(lesson),
-  );
+  const mediaLessons = getModuleMediaLessons(module);
 
   if (mediaLessons.length < 4) {
     return null;
   }
 
-  return mediaLessons[0] ?? null;
+  const index = Math.floor(Math.random() * mediaLessons.length);
+  return mediaLessons[index] ?? null;
 }
