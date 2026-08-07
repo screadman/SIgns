@@ -13,14 +13,20 @@
       "backgroundColor": "#282454"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.signs.aslapp",
+      "infoPlist": {
+        "NSCameraUsageDescription": "SIGNS uses the camera for Practice Mirror so you can compare your signing to illustrations on device."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundColor": "#2A1C5D"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.signs.aslapp",
+      "permissions": ["android.permission.CAMERA"]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -29,6 +35,7 @@
     "plugins": [
       "expo-router",
       "expo-font",
+      "expo-dev-client",
       [
         "expo-splash-screen",
         {
@@ -41,6 +48,13 @@
         "expo-camera",
         {
           "cameraPermission": "SIGNS uses the camera for Practice Mirror so you can compare your signing to illustrations on device."
+        }
+      ],
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "SIGNS uses the camera for Practice Mirror hand guidance and alphabet recognition.",
+          "enableMicrophonePermission": false
         }
       ],
       [
