@@ -1,19 +1,15 @@
 /**
- * App navigation model: Dictionary browses signs, Practice trains skills.
+ * App navigation: Home (path) · Practice (train) · Profile.
  */
 
-export type MainTabId = 'home' | 'learn' | 'practice' | 'profile';
+export type MainTabId = 'home' | 'practice' | 'profile';
 
 export type MainTab = {
   id: MainTabId;
   label: string;
-  href: '/(tabs)/home' | '/(tabs)/learn' | '/(tabs)/practice' | '/(tabs)/profile';
-  icon:
-    | 'home-outline'
-    | 'book-outline'
-    | 'extension-puzzle-outline'
-    | 'person-outline';
-  activeIcon: 'home' | 'book' | 'extension-puzzle' | 'person';
+  href: '/(tabs)/home' | '/(tabs)/practice' | '/(tabs)/profile';
+  icon: 'home-outline' | 'extension-puzzle-outline' | 'person-outline';
+  activeIcon: 'home' | 'extension-puzzle' | 'person';
 };
 
 export const MAIN_TABS: MainTab[] = [
@@ -23,13 +19,6 @@ export const MAIN_TABS: MainTab[] = [
     href: '/(tabs)/home',
     icon: 'home-outline',
     activeIcon: 'home',
-  },
-  {
-    id: 'learn',
-    label: 'Dictionary',
-    href: '/(tabs)/learn',
-    icon: 'book-outline',
-    activeIcon: 'book',
   },
   {
     id: 'practice',

@@ -30,7 +30,7 @@ export const CONVERSATION_SIGNS: VocabSign[] = [
     label: 'Hello',
     description:
       'Raise an open hand near the side of the forehead and move it slightly outward, like a small salute.',
-    tip: 'Keep the movement short and friendly. Face the person you greet.',
+    tip: 'Keep the movement short and friendly. Face the person you greet. Open hand near the temple, slight outward tip.',
     mediaStatus: 'needs-recording',
     mediaNote: 'Illustration not ready yet.',
   },
@@ -100,7 +100,7 @@ export const CONVERSATION_SIGNS: VocabSign[] = [
     label: 'Thank you',
     description:
       'Flat hand starts at the chin and moves forward toward the other person.',
-    tip: 'Smile slightly. The motion goes out from the chin, not down the chest.',
+    tip: 'Smile slightly. Motion goes out from the chin toward the person, not down the chest. That path is the whole sign.',
     mediaStatus: 'needs-recording',
     mediaNote: 'Illustration not ready yet.',
   },

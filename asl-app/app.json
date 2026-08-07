@@ -37,6 +37,26 @@
           "resizeMode": "cover",
           "backgroundColor": "#282454"
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "SIGNS uses the camera for Practice Mirror so you can compare your signing to illustrations on device."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "SIGNS uses your photo library so you can set a profile photo.",
+          "cameraPermission": "SIGNS uses the camera so you can take a profile photo."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "sounds": [],
+          "enableBackgroundRemoteNotifications": false
+        }
       ]
     ],
     "experiments": {

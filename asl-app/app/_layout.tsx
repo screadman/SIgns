@@ -43,7 +43,16 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" />
+        <Stack.Screen
+          name="onboarding-ready"
+          options={{ animation: 'fade' }}
+        />
+        <Stack.Screen
+          name="onboarding-setup"
+          options={{ animation: 'slide_from_right' }}
+        />
         <Stack.Screen name="(auth)" />
+
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="module/[id]"
@@ -55,6 +64,46 @@ export default function RootLayout() {
         />
         <Stack.Screen
           name="practice-mode/[mode]"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="practice/flashcards/[moduleId]"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="practice/matching/[moduleId]"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="practice/fingerspelling"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="practice/mirror"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="legal/privacy"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="legal/terms"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="quiz/daily"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="quiz/missed"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="quiz/boss/[moduleId]"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="quiz/unit/[unitId]"
           options={{ animation: 'slide_from_right' }}
         />
         <Stack.Screen

@@ -16,14 +16,13 @@ import {
 } from 'react-native';
 import {
   SafeAreaView,
-  useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
 import {
   OnboardingDots,
   OnboardingSlide,
 } from '../components/onboarding';
-import { PrimaryButton } from '../components/ui';
+import { PrimaryButton, ScreenBackdrop } from '../components/ui';
 import {
   borderRadius,
   borderWidth,
@@ -33,7 +32,6 @@ import {
   lineHeight,
   spacing,
 } from '../constants/theme';
-import { markOnboardingAsSeen } from '../lib/onboardingStorage';
 
 const WELCOME_ILLUSTRATION = require('../assets/onboarding/welcome.png');
 const START_ILLUSTRATION = require('../assets/onboarding/start.png');
@@ -53,21 +51,21 @@ type Feature = {
 
 const FEATURES: Feature[] = [
   {
-    icon: 'eye-outline',
-    title: 'Watch',
-    subtitle: 'See signs through images',
+    icon: 'map-outline',
+    title: 'Follow the path',
+    subtitle: 'See where you are and what is left',
     tone: 'primary',
   },
   {
-    icon: 'hand-left-outline',
-    title: 'Practice',
-    subtitle: 'Test your knowledge with quizzes',
+    icon: 'flash-outline',
+    title: 'Daily Quiz',
+    subtitle: 'A short ritual that protects your streak',
     tone: 'accent',
   },
   {
-    icon: 'trophy-outline',
-    title: 'Earn',
-    subtitle: 'Unlock badges and level up',
+    icon: 'hand-left-outline',
+    title: 'Learn signs',
+    subtitle: 'Stills, tips, and parameters that stick',
     tone: 'primary',
   },
 ];
@@ -95,9 +93,8 @@ export default function OnboardingScreen() {
       easing: Easing.out(Easing.cubic),
       useNativeDriver: USE_NATIVE_DRIVER,
     }).start(() => {
-      void markOnboardingAsSeen().finally(() => {
-        router.replace('/(tabs)/home');
-      });
+      setIsFinishing(false);
+      router.replace('/onboarding-ready');
     });
   };
 
@@ -122,7 +119,8 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <Animated.View style={[styles.screen, { opacity: screenOpacity }]}>
+    <ScreenBackdrop variant="onboarding">
+      <Animated.View style={[styles.screen, { opacity: screenOpacity }]}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View
           style={styles.carouselArea}
@@ -159,9 +157,9 @@ export default function OnboardingScreen() {
                 if (item === 'welcome') {
                   return (
                     <OnboardingSlide
-                      badge="👋 SIGNS"
-                      title="Learn Sign Language"
-                      subtitle="Accessible, fun and progressive"
+                      badge="SIGNS"
+                      title="Learn ASL your way"
+                      subtitle="A clear path, a daily ritual, and signs that stick."
                       illustration={WELCOME_ILLUSTRATION}
                       width={width}
                       height={pageHeight}
@@ -182,11 +180,11 @@ export default function OnboardingScreen() {
 
                 return (
                   <OnboardingSlide
-                    badge="🎉 LET'S GO"
+                    badge="LET'S GO"
                     badgeTone="accent"
                     animateBadge
-                    title="Ready to Start?"
-                    subtitle="No account required. Start learning now."
+                    title="Ready to start?"
+                    subtitle="A few quick questions, then your path opens."
                     illustration={START_ILLUSTRATION}
                     width={width}
                     height={pageHeight}
@@ -210,6 +208,7 @@ export default function OnboardingScreen() {
         </View>
       </SafeAreaView>
     </Animated.View>
+    </ScreenBackdrop>
   );
 }
 
@@ -316,11 +315,11 @@ function FeaturesSlide({
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.transparent,
   },
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.transparent,
   },
   carouselArea: {
     flex: 1,
@@ -336,14 +335,14 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
-    backgroundColor: colors.background,
+    backgroundColor: colors.transparent,
     zIndex: 20,
     elevation: 20,
   },
   featuresSlide: {
     overflow: 'hidden',
     justifyContent: 'flex-start',
-    backgroundColor: colors.background,
+    backgroundColor: colors.transparent,
   },
   featuresContent: {
     paddingTop: spacing.lg,

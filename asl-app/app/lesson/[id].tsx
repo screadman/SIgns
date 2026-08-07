@@ -12,7 +12,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
+  GlassBackButton,
   LearningBottomNav,
+  ScreenBackdrop,
   SignCard,
 } from '../../components/ui';
 import { getLesson, lessonHasQuizMedia } from '../../constants/learning';
@@ -24,7 +26,8 @@ import {
   opacity,
   spacing,
 } from '../../constants/theme';
-import { checkAndUnlockBadges, saveCompletedLesson } from '../../lib/storage';
+import { checkAndUnlockBadges, saveBestLessonStars, saveCompletedLesson } from '../../lib/storage';
+import { markSignExposed } from '../../lib/signStrength';
 
 function getParam(value: string | string[] | undefined): string {
   return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
@@ -49,14 +52,16 @@ export default function LessonScreen() {
 
   if (!lessonData) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.notFound}>
-          <Text style={styles.notFoundTitle}>Lesson not found</Text>
-          <Pressable onPress={() => router.back()} style={styles.backLink}>
-            <Text style={styles.backLinkText}>Go back</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
+      <ScreenBackdrop variant="path">
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.notFound}>
+            <Text style={styles.notFoundTitle}>Lesson not found</Text>
+            <Pressable onPress={() => router.back()} style={styles.backLink}>
+              <Text style={styles.backLinkText}>Go back</Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      </ScreenBackdrop>
     );
   }
 
@@ -74,6 +79,8 @@ export default function LessonScreen() {
 
   async function markLearned() {
     await saveCompletedLesson(lesson.id);
+    await saveBestLessonStars(lesson.id, 1);
+    await markSignExposed(lesson.sign.id);
     await checkAndUnlockBadges();
   }
 
@@ -138,22 +145,16 @@ export default function LessonScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <ScreenBackdrop variant="path" accent={module.color}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.screen}>
         <View style={styles.header}>
           <View style={styles.headerTitleGroup}>
-            <Pressable
+            <GlassBackButton
               onPress={() =>
                 router.replace(`/module/${lesson.moduleId}` as Href)
               }
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
-              style={[
-                styles.backButton,
-            ]}
-            >
-              <Ionicons name="arrow-back" size={18} color={colors.text} />
-            </Pressable>
+            />
 
             <Text style={styles.title}>{module.title}</Text>
           </View>
@@ -183,10 +184,11 @@ export default function LessonScreen() {
               }}
               accessibilityRole="button"
               accessibilityLabel="Previous sign"
-              style={[
+              style={({ pressed }) => [
                 styles.navArrow,
                 (!previousLesson || isSaving) && styles.navArrowDisabled,
-            ]}
+                pressed && previousLesson && !isSaving && styles.pressed,
+              ]}
             >
               <Ionicons
                 name="arrow-back"
@@ -209,10 +211,11 @@ export default function LessonScreen() {
               }}
               accessibilityRole="button"
               accessibilityLabel="Next sign"
-              style={[
+              style={({ pressed }) => [
                 styles.navArrow,
                 (!nextLesson || isSaving) && styles.navArrowDisabled,
-            ]}
+                pressed && nextLesson && !isSaving && styles.pressed,
+              ]}
             >
               <Ionicons
                 name="arrow-forward"
@@ -230,11 +233,45 @@ export default function LessonScreen() {
                   return;
                 }
 
+                router.push(
+                  `/practice/mirror?lessonId=${encodeURIComponent(lesson.id)}` as Href,
+                );
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Practice Mirror"
+              accessibilityState={{ disabled: !canQuiz || isSaving }}
+              style={({ pressed }) => [
+                styles.actionButton,
+                (!canQuiz || isSaving) && styles.actionButtonDisabled,
+                pressed && canQuiz && !isSaving && styles.pressed,
+              ]}
+            >
+              <Ionicons
+                name="camera-outline"
+                size={20}
+                color={canQuiz ? colors.accent : colors.textMuted}
+              />
+              <Text
+                style={[
+                  styles.actionLabel,
+                  !canQuiz && styles.actionLabelDisabled,
+                ]}
+              >
+                Mirror
+              </Text>
+            </Pressable>
+
+            <Pressable
+              disabled={!canQuiz || isSaving}
+              onPress={() => {
+                if (!canQuiz || isSaving) {
+                  return;
+                }
+
                 void (async () => {
                   setIsSaving(true);
 
                   try {
-                    await markLearned();
                     router.push(`/quiz/${lesson.id}` as Href);
                   } finally {
                     setIsSaving(false);
@@ -244,10 +281,11 @@ export default function LessonScreen() {
               accessibilityRole="button"
               accessibilityLabel="Optional practice"
               accessibilityState={{ disabled: !canQuiz || isSaving }}
-              style={[
+              style={({ pressed }) => [
                 styles.actionButton,
                 (!canQuiz || isSaving) && styles.actionButtonDisabled,
-            ]}
+                pressed && canQuiz && !isSaving && styles.pressed,
+              ]}
             >
               <Ionicons
                 name="extension-puzzle"
@@ -272,11 +310,12 @@ export default function LessonScreen() {
                 }}
                 accessibilityRole="button"
                 accessibilityLabel="Mark as learned"
-                style={[
+                style={({ pressed }) => [
                   styles.actionButton,
                   styles.gotItButton,
                   justLearned && styles.gotItButtonDone,
-            ]}
+                  pressed && !justLearned && !isSaving && styles.pressed,
+                ]}
               >
                 <View style={styles.gotItIconWrap}>
                   <Ionicons
@@ -303,14 +342,15 @@ export default function LessonScreen() {
         </View>
       </View>
       <LearningBottomNav />
-    </SafeAreaView>
+      </SafeAreaView>
+    </ScreenBackdrop>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.transparent,
   },
   screen: {
     flex: 1,
@@ -327,14 +367,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing['2sm'],
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surfaceMuted,
   },
   pressed: {
     opacity: opacity.pressed,

@@ -10,7 +10,7 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         sceneStyle: {
-          backgroundColor: colors.background,
+          backgroundColor: colors.transparent,
         },
         tabBarStyle: {
           position: 'absolute',
@@ -24,12 +24,6 @@ export default function TabLayout() {
         name="home"
         options={{
           title: 'Home',
-        }}
-      />
-      <Tabs.Screen
-        name="learn"
-        options={{
-          title: 'Dictionary',
         }}
       />
       <Tabs.Screen

@@ -17,13 +17,23 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { LearningBottomNav } from '../../components/ui';
 import {
-  getFirstPracticeLesson,
+  GlassBackButton,
+  LearningBottomNav,
+  LearningPath,
+  ScreenBackdrop,
+  SignGlassFrame,
+  type LearningPathItem,
+} from '../../components/ui';
+import {
   getLearningModule,
-  lessonHasQuizMedia,
   type Lesson,
 } from '../../constants/learning';
+import {
+  getModuleUnitForLesson,
+  isModuleUnitUnlocked,
+  moduleUsesUnitPath,
+} from '../../constants/moduleUnits';
 import {
   borderRadius,
   borderWidth,
@@ -33,6 +43,7 @@ import {
   opacity,
   spacing,
 } from '../../constants/theme';
+import { getLessonPathState, isModuleUnlocked } from '../../lib/learningPath';
 import {
   getLessonImageSource,
   lessonHasSignImage,
@@ -40,7 +51,9 @@ import {
 import {
   getCompletedLessons,
   getFavoriteLessons,
+  getLessonStarsMap,
   isFavoriteLesson,
+  resolveLessonDisplayStars,
   toggleFavoriteLesson,
 } from '../../lib/storage';
 
@@ -71,9 +84,9 @@ function SignGridCard({
       accessibilityLabel={`${lesson.title}${isCompleted ? ', completed' : ''}${
         isFavorite ? ', favorite' : ''
       }`}
-      style={[styles.signCard]}
+      style={({ pressed }) => [styles.signCard, pressed && styles.pressed]}
     >
-      <View style={styles.signMedia}>
+      <SignGlassFrame style={styles.signMedia}>
         {hasImage && imageSource ? (
           <Image
             source={imageSource}
@@ -105,7 +118,7 @@ function SignGridCard({
             <Ionicons name="checkmark" size={12} color={colors.white} />
           </View>
         ) : null}
-      </View>
+      </SignGlassFrame>
       <Text style={styles.signLabel} numberOfLines={1}>
         {lesson.sign.label}
       </Text>
@@ -119,6 +132,8 @@ export default function ModuleScreen() {
   const module = getLearningModule(getParam(params.id));
   const [completedLessonIds, setCompletedLessonIds] = useState<string[]>([]);
   const [favoriteLessonIds, setFavoriteLessonIds] = useState<string[]>([]);
+  const [lessonStars, setLessonStars] = useState<Record<string, number>>({});
+  const [browseMode, setBrowseMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   useFocusEffect(
@@ -127,19 +142,29 @@ export default function ModuleScreen() {
 
       async function loadProgress() {
         try {
-          const [completedLessons, favorites] = await Promise.all([
+          const [completedLessons, favorites, starsMap] = await Promise.all([
             getCompletedLessons(),
             getFavoriteLessons(),
+            getLessonStarsMap(),
           ]);
 
           if (isActive) {
             setCompletedLessonIds(completedLessons);
             setFavoriteLessonIds(favorites);
+            setLessonStars(starsMap);
+
+            if (
+              module &&
+              !isModuleUnlocked(module.id, completedLessons)
+            ) {
+              router.replace('/(tabs)/home' as Href);
+            }
           }
         } catch {
           if (isActive) {
             setCompletedLessonIds([]);
             setFavoriteLessonIds([]);
+            setLessonStars({});
           }
         }
       }
@@ -149,7 +174,15 @@ export default function ModuleScreen() {
       return () => {
         isActive = false;
       };
-    }, []),
+    }, [module, router]),
+  );
+
+  const lessonPath = useMemo(
+    () =>
+      module
+        ? getLessonPathState(module, completedLessonIds)
+        : null,
+    [module, completedLessonIds],
   );
 
   const filteredLessons = useMemo(() => {
@@ -178,356 +211,360 @@ export default function ModuleScreen() {
     });
   }, [module, searchQuery]);
 
-  if (!module) {
+  if (!module || !lessonPath) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.notFound}>
-          <Text style={styles.notFoundTitle}>Module not found</Text>
-          <Pressable onPress={() => router.back()} style={styles.backLink}>
-            <Text style={styles.backLinkText}>Go back</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
+      <ScreenBackdrop variant="path" accent={module?.color}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.notFound}>
+            <Text style={styles.notFoundTitle}>Module not found</Text>
+            <Pressable onPress={() => router.back()} style={styles.backLink}>
+              <Text style={styles.backLinkText}>Go back</Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      </ScreenBackdrop>
     );
   }
-
-  const completedCount = module.lessons.filter((lesson) =>
-    completedLessonIds.includes(lesson.id),
-  ).length;
-  const practiceLesson = getFirstPracticeLesson(module);
-  const canPractice =
-    practiceLesson !== null && lessonHasQuizMedia(practiceLesson);
 
   async function handleToggleFavorite(lessonId: string) {
     const updated = await toggleFavoriteLesson(lessonId);
     setFavoriteLessonIds(updated);
   }
 
+  const pathItems: LearningPathItem[] = lessonPath.nodes.map((node) => {
+    const isCurrent = node.state === 'current';
+    const isLocked = node.state === 'locked' || node.locked;
+    if (node.kind === 'boss') {
+      const bossDone = node.state === 'done';
+      return {
+        id: node.id,
+        state: node.state,
+        label: node.title,
+        icon: 'trophy' as const,
+        stars: resolveLessonDisplayStars(
+          `boss-${module.id}`,
+          lessonStars,
+          bossDone,
+        ),
+        bubbleLabel: isCurrent ? 'BOSS' : null,
+        accessibilityLabel: isLocked
+          ? `${node.title}, locked`
+          : `${node.title}${isCurrent ? ', ready' : ''}`,
+        onPress: isLocked
+          ? undefined
+          : () => router.push(`/quiz/boss/${module.id}` as Href),
+      };
+    }
+
+    if (node.kind === 'unit' && node.unitId) {
+      const unitIcon =
+        module.id === 'numbers' ? 'apps-outline' : 'text';
+      return {
+        id: node.id,
+        state: node.state,
+        label: node.label,
+        icon: (node.state === 'done'
+          ? 'checkmark'
+          : unitIcon) as LearningPathItem['icon'],
+        progressPercent: node.state === 'done' ? 100 : isCurrent ? 35 : 0,
+        accentColor: module.color,
+        stars: resolveLessonDisplayStars(
+          `unit-${node.unitId}`,
+          lessonStars,
+          node.state === 'done',
+        ),
+        bubbleLabel: isCurrent ? lessonPath.bubbleLabel : null,
+        accessibilityLabel: isLocked
+          ? `${node.title}, locked. Finish the previous unit first.`
+          : `${node.title}, ${node.state}`,
+        onPress: isLocked
+          ? undefined
+          : () => router.push(`/quiz/unit/${node.unitId}` as Href),
+      };
+    }
+
+    return {
+      id: node.id,
+      state: node.state,
+      label: node.label,
+      icon: (node.state === 'done'
+        ? 'checkmark'
+        : 'hand-left-outline') as LearningPathItem['icon'],
+      progressPercent: node.state === 'done' ? 100 : isCurrent ? 35 : 0,
+      accentColor: module.color,
+      stars: resolveLessonDisplayStars(
+        node.lessonId,
+        lessonStars,
+        node.state === 'done',
+      ),
+      bubbleLabel: isCurrent ? lessonPath.bubbleLabel : null,
+      accessibilityLabel: isLocked
+        ? `${node.title}, locked. Complete the previous sign first.`
+        : `${node.title}, ${node.state}`,
+      onPress: isLocked
+        ? undefined
+        : () => router.push(`/lesson/${node.lessonId}` as Href),
+    };
+  });
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <ScreenBackdrop variant="path" accent={module.color}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.screen}>
         <View style={styles.header}>
-          <View style={styles.headerTitleGroup}>
-            <Pressable
-              onPress={() => {
-                if (router.canDismiss()) {
-                  router.dismiss();
-                  return;
-                }
-
-                if (router.canGoBack()) {
-                  router.back();
-                  return;
-                }
-
-                router.replace('/(tabs)/learn' as Href);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
-              hitSlop={12}
-              style={[styles.backButton]}
+          <GlassBackButton
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+                return;
+              }
+              router.replace('/(tabs)/home' as Href);
+            }}
+          />
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {module.title}
+          </Text>
+          <Pressable
+            onPress={() => setBrowseMode((value) => !value)}
+            accessibilityRole="button"
+            accessibilityLabel={browseMode ? 'Show learning path' : 'Search and browse'}
+            style={({ pressed }) => [
+              styles.modeChip,
+              browseMode && styles.modeChipActive,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Ionicons
+              name={browseMode ? 'map-outline' : 'search'}
+              size={16}
+              color={browseMode ? colors.white : colors.primary}
+            />
+            <Text
+              style={[
+                styles.modeChipText,
+                browseMode && styles.modeChipTextActive,
+              ]}
             >
-              <Ionicons name="arrow-back" size={18} color={colors.text} />
-            </Pressable>
-            <Text style={styles.title}>{module.title}</Text>
-          </View>
-
-          <View style={styles.progressBadge}>
-            <Text style={styles.progressBadgeText}>
-              {completedCount}/{module.lessons.length}
+              {browseMode ? 'Path' : 'Browse'}
             </Text>
-          </View>
+          </Pressable>
         </View>
 
         <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
         >
-          <Pressable
-            disabled={!canPractice}
-            onPress={() => {
-              if (!practiceLesson || !canPractice) {
-                return;
-              }
-
-              router.push(`/quiz/${practiceLesson.id}` as Href);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Start optional practice"
-            accessibilityState={{ disabled: !canPractice }}
-            style={[
-              styles.practiceCard,
-              !canPractice && styles.practiceCardDisabled,
-            ]}
-          >
-            <View style={styles.practiceCopy}>
-              <Text
-                style={[
-                  styles.practiceEyebrow,
-                  !canPractice && styles.practiceTextDisabled,
-                ]}
-              >
-                Let&apos;s put it into practice
-              </Text>
-              <Text
-                style={[
-                  styles.practiceTitle,
-                  !canPractice && styles.practiceTextDisabled,
-                ]}
-              >
-                {canPractice ? 'Ready, set, go' : 'Practice coming soon'}
-              </Text>
-            </View>
-            <View style={styles.practiceIconWrap}>
-              <Ionicons
-                name="extension-puzzle"
-                size={28}
-                color={canPractice ? colors.white : colors.textMuted}
+          {browseMode ? (
+            <>
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search signs…"
+                placeholderTextColor={colors.textMuted}
+                style={styles.search}
+                accessibilityLabel="Search signs"
               />
-            </View>
-          </Pressable>
-
-          <View style={styles.searchBar}>
-            <TextInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Search signs..."
-              placeholderTextColor={colors.textMuted}
-              style={styles.searchInput}
-              accessibilityLabel={`Search in ${module.title}`}
-              returnKeyType="search"
-              autoCorrect={false}
-              autoCapitalize="none"
-              clearButtonMode="while-editing"
-            />
-            <Ionicons name="search" size={20} color={colors.textMuted} />
-          </View>
-
-          <Text style={styles.sectionTitle}>Signs in collection</Text>
-
-          <View style={styles.signGrid}>
-            {filteredLessons.map((lesson) => (
-              <SignGridCard
-                key={lesson.id}
-                lesson={lesson}
-                isCompleted={completedLessonIds.includes(lesson.id)}
-                isFavorite={isFavoriteLesson(lesson.id, favoriteLessonIds)}
-                onPress={() => router.push(`/lesson/${lesson.id}` as Href)}
-                onToggleFavorite={() => {
-                  void handleToggleFavorite(lesson.id);
-                }}
-              />
-            ))}
-          </View>
-
-          {filteredLessons.length === 0 ? (
-            <Text style={styles.emptyText}>No signs match your search.</Text>
-          ) : null}
+              <View style={styles.grid}>
+                {filteredLessons.map((lesson) => {
+                  let locked = false;
+                  if (moduleUsesUnitPath(module.id)) {
+                    const unit = getModuleUnitForLesson(lesson.id);
+                    locked = unit
+                      ? !isModuleUnitUnlocked(unit.id, completedLessonIds)
+                      : true;
+                  } else {
+                    const pathNode = lessonPath.nodes.find(
+                      (node) => node.lessonId === lesson.id,
+                    );
+                    locked = Boolean(pathNode?.locked);
+                  }
+                  return (
+                    <SignGridCard
+                      key={lesson.id}
+                      lesson={lesson}
+                      isCompleted={completedLessonIds.includes(lesson.id)}
+                      isFavorite={isFavoriteLesson(lesson.id, favoriteLessonIds)}
+                      onPress={
+                        locked
+                          ? () => undefined
+                          : () => router.push(`/lesson/${lesson.id}` as Href)
+                      }
+                      onToggleFavorite={() => {
+                        void handleToggleFavorite(lesson.id);
+                      }}
+                    />
+                  );
+                })}
+              </View>
+            </>
+          ) : (
+            <>
+              <Text style={styles.sectionTitle}>Lesson path</Text>
+              <LearningPath items={pathItems} size="md" layout="pairs" />
+              {lessonPath.currentLesson ? (
+                <Pressable
+                  style={styles.mirrorCta}
+                  onPress={() =>
+                    router.push(
+                      `/practice/mirror?lessonId=${encodeURIComponent(lessonPath.currentLesson!.id)}` as Href,
+                    )
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel="Open Practice Mirror for current sign"
+                >
+                  <Ionicons
+                    name="camera-outline"
+                    size={18}
+                    color={colors.primary}
+                  />
+                  <Text style={styles.mirrorCtaText}>
+                    Mirror this sign
+                  </Text>
+                </Pressable>
+              ) : null}
+            </>
+          )}
         </ScrollView>
+
+        <LearningBottomNav />
       </View>
-      <LearningBottomNav />
-    </SafeAreaView>
+      </SafeAreaView>
+    </ScreenBackdrop>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.transparent,
   },
   screen: {
     flex: 1,
+    backgroundColor: colors.transparent,
   },
   header: {
-    height: 60,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing['2sm'],
-  },
-  headerTitleGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing['2sm'],
-    flexShrink: 1,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surfaceMuted,
-  },
-  pressed: {
-    opacity: opacity.pressed,
-  },
-  title: {
-    color: colors.text,
-    fontFamily: fontFamily.headingExtraBold,
-    fontSize: fontSize['2xl'],
-    lineHeight: 30,
-    flexShrink: 1,
-  },
-  progressBadge: {
-    paddingHorizontal: spacing['2sm'],
-    paddingVertical: 6,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primarySurface,
-  },
-  progressBadgeText: {
-    color: colors.primary,
-    fontFamily: fontFamily.heading,
-    fontSize: fontSize.sm,
-    lineHeight: 18,
-  },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing['2xl'],
-  },
-  practiceCard: {
-    minHeight: 88,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.md,
-    borderRadius: borderRadius.xl,
-    backgroundColor: colors.accent,
-  },
-  practiceCardDisabled: {
-    backgroundColor: colors.surfaceMuted,
-  },
-  practiceCopy: {
-    flex: 1,
-    marginRight: spacing.md,
-    gap: 4,
-  },
-  practiceEyebrow: {
-    color: colors.white,
-    fontFamily: fontFamily.body,
-    fontSize: fontSize.sm,
-    lineHeight: 18,
-  },
-  practiceTitle: {
-    color: colors.white,
-    fontFamily: fontFamily.headingExtraBold,
-    fontSize: fontSize.xl,
-    lineHeight: 26,
-  },
-  practiceTextDisabled: {
-    color: colors.textMuted,
-  },
-  practiceIconWrap: {
-    width: 52,
-    height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: borderRadius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.22)',
-  },
-  searchBar: {
-    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+  },
+  headerTitle: {
+    flex: 1,
+    color: colors.text,
+    fontFamily: fontFamily.heading,
+    fontSize: fontSize.lg,
+  },
+  modeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 2,
     borderRadius: borderRadius.full,
+    backgroundColor: colors.primarySurface,
+  },
+  modeChipActive: {
+    backgroundColor: colors.primary,
+  },
+  modeChipText: {
+    color: colors.primary,
+    fontFamily: fontFamily.bodySemibold,
+    fontSize: fontSize.xs,
+  },
+  modeChipTextActive: {
+    color: colors.white,
+  },
+  scroll: {
+    flex: 1,
+  },
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['2xl'],
+    gap: spacing.md,
+  },
+  sectionTitle: {
+    color: colors.text,
+    fontFamily: fontFamily.heading,
+    fontSize: fontSize.lg,
+  },
+  search: {
+    minHeight: 44,
+    borderRadius: borderRadius.lg,
     borderWidth: borderWidth.thin,
     borderColor: colors.border,
-    backgroundColor: colors.surfaceElevated,
-  },
-  searchInput: {
-    flex: 1,
+    paddingHorizontal: spacing.md,
     color: colors.text,
     fontFamily: fontFamily.body,
     fontSize: fontSize.base,
-    paddingVertical: spacing.sm,
+    backgroundColor: colors.surfaceElevated,
   },
-  sectionTitle: {
-    marginBottom: spacing['2sm'],
-    color: colors.textMuted,
-    fontFamily: fontFamily.bodySemibold,
-    fontSize: fontSize.base,
-    lineHeight: 22,
-  },
-  signGrid: {
+  grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: spacing['2sm'],
+    gap: spacing.sm,
   },
   signCard: {
-    width: '47.5%',
-    borderRadius: borderRadius.xl,
-    overflow: 'hidden',
-    backgroundColor: colors.surfaceElevated,
-    borderWidth: borderWidth.thin,
-    borderColor: colors.border,
+    width: '31%',
+    flexGrow: 1,
+    maxWidth: '32%',
   },
   signMedia: {
-    height: 120,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.signSurface,
+    aspectRatio: 1,
+    borderRadius: borderRadius.lg,
   },
   signImage: {
-    width: '80%',
-    height: '80%',
+    width: '90%',
+    height: '90%',
   },
   heartButton: {
     position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.white,
+    top: 6,
+    right: 6,
+    zIndex: 2,
   },
   completedBadge: {
     position: 'absolute',
-    left: spacing.sm,
-    bottom: spacing.sm,
-    width: 22,
-    height: 22,
+    bottom: 6,
+    left: 6,
+    zIndex: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.success,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.success,
   },
   signLabel: {
-    width: '100%',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
+    textAlign: 'center',
     color: colors.text,
-    fontFamily: fontFamily.headingExtraBold,
-    fontSize: fontSize.sm,
-    lineHeight: 18,
-    textAlign: 'center',
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: fontSize.xs,
   },
-  emptyText: {
-    marginTop: spacing.md,
-    color: colors.textMuted,
-    fontFamily: fontFamily.body,
+  mirrorCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    minHeight: 48,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primarySurface,
+  },
+  mirrorCtaText: {
+    color: colors.primary,
+    fontFamily: fontFamily.heading,
     fontSize: fontSize.base,
-    textAlign: 'center',
   },
   notFound: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.xl,
+    gap: spacing.md,
   },
   notFoundTitle: {
     color: colors.text,
@@ -535,12 +572,13 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xl,
   },
   backLink: {
-    marginTop: spacing.md,
-    padding: spacing['2sm'],
+    padding: spacing.sm,
   },
   backLinkText: {
     color: colors.primary,
     fontFamily: fontFamily.bodySemibold,
-    fontSize: fontSize.base,
+  },
+  pressed: {
+    opacity: opacity.pressed,
   },
 });
