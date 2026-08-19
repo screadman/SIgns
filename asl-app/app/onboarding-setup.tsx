@@ -161,7 +161,7 @@ export default function OnboardingSetupScreen() {
   );
   const [notificationsOptIn, setNotificationsOptIn] = useState<
     boolean | null
-  >(null);
+  >(true);
   const [practiceDays, setPracticeDays] = useState<PracticeDayIndex[]>(() => {
     const jsDay = new Date().getDay();
     const today = (jsDay === 0 ? 6 : jsDay - 1) as PracticeDayIndex;
