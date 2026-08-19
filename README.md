@@ -58,3 +58,10 @@ Scan the QR code with the Expo Go app (iOS/Android), or press w for the web prev
 ## Team
 
 Built by Rayann Sagnon and Steven Atchall as a collaborative side project.
+
+<img width="1001" height="2048" alt="WhatsApp Image 2026-08-19 at 9 11 24 AM" src="https://github.com/user-attachments/assets/98204ba1-6173-471f-9f65-f2ebe3b160b1" />
+<img width="1004" height="2048" alt="WhatsApp Image 2026-08-19 at 9 11 24 AM (2)" src="https://github.com/user-attachments/assets/f96b7197-5b94-4108-8149-07ada9ecd2b2" />
+<img width="1003" height="2048" alt="WhatsApp Image 2026-08-19 at 9 11 24 AM (1)" src="https://github.com/user-attachments/assets/ebc8585b-622f-4df3-9b64-d5f3aaddd46e" />
+
+
+
