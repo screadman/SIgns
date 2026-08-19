@@ -125,7 +125,7 @@ export async function getReminderSettings(): Promise<ReminderSettings> {
   const profile = await getOnboardingProfile();
 
   const fallback: ReminderSettings = {
-    enabled: profile?.notificationsOptIn ?? false,
+    enabled: profile?.notificationsOptIn ?? true,
     days: profile?.practiceDays?.length
       ? [...profile.practiceDays]
       : [0, 1, 2, 3, 4, 5, 6],
