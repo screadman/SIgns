@@ -71,12 +71,11 @@ function AnswerButton({
           ? `ASL sign for ${lesson.sign.label}`
           : lesson.sign.label
       }
-      style={({ pressed }) => [
+      style={[
         styles.answer,
         showImage && styles.imageAnswer,
         state === 'correct' && styles.correctAnswer,
         state === 'incorrect' && styles.incorrectAnswer,
-        pressed && !disabled && styles.pressed,
       ]}
     >
       {!showImage ? (

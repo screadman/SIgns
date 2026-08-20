@@ -226,7 +226,7 @@ export function isModuleUnitUnlocked(
   return true;
 }
 
-/** First incomplete lesson in the current unit (Mirror CTA). */
+/** First incomplete lesson in the current unit. */
 export function getCurrentUnitLesson(
   moduleId: string,
   completedIds: string[],

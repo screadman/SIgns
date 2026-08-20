@@ -5,8 +5,8 @@ function placeholders(
 ): VocabSign[] {
   return entries.map((entry) => ({
     ...entry,
-    mediaStatus: 'needs-recording' as const,
-    mediaNote: 'Illustration not ready yet.',
+    mediaStatus: 'ready' as const,
+    mediaNote: 'Illustration in MODULE_IMAGES.',
   }));
 }
 

@@ -7,17 +7,6 @@ import { hasMediaAsset, toImageSource } from '../constants/aslLetters';
 import type { Lesson } from '../constants/learning';
 import { WH_QUESTION_IMAGES } from '../constants/whQuestionImages';
 
-function isImageModule(
-  moduleId: string | undefined,
-): moduleId is 'alphabet' | 'numbers' | 'wh-questions' {
-  return (
-    moduleId === 'alphabet' ||
-    moduleId === 'numbers' ||
-    moduleId === 'wh-questions'
-  );
-}
-
-
 export function peekSignImage(
   moduleId: string | undefined,
   signId: string,
@@ -34,11 +23,9 @@ export function peekSignImage(
     return NUMBER_IMAGES[signId];
   }
 
-
   if (moduleId === 'wh-questions') {
     return WH_QUESTION_IMAGES[signId];
   }
-
 
   return MODULE_IMAGES[moduleId]?.[signId];
 }
