@@ -56,7 +56,6 @@ function resolveActiveKey(pathname: string) {
     pathname.includes('practice') ||
     pathname.includes('practice-mode') ||
     pathname.includes('quiz') ||
-    pathname.includes('mirror') ||
     pathname.includes('fingerspelling')
   ) {
     return 'practice';

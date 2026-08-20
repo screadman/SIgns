@@ -233,41 +233,6 @@ export default function LessonScreen() {
                   return;
                 }
 
-                router.push(
-                  `/practice/mirror?lessonId=${encodeURIComponent(lesson.id)}` as Href,
-                );
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Practice Mirror"
-              accessibilityState={{ disabled: !canQuiz || isSaving }}
-              style={({ pressed }) => [
-                styles.actionButton,
-                (!canQuiz || isSaving) && styles.actionButtonDisabled,
-                pressed && canQuiz && !isSaving && styles.pressed,
-              ]}
-            >
-              <Ionicons
-                name="camera-outline"
-                size={20}
-                color={canQuiz ? colors.accent : colors.textMuted}
-              />
-              <Text
-                style={[
-                  styles.actionLabel,
-                  !canQuiz && styles.actionLabelDisabled,
-                ]}
-              >
-                Mirror
-              </Text>
-            </Pressable>
-
-            <Pressable
-              disabled={!canQuiz || isSaving}
-              onPress={() => {
-                if (!canQuiz || isSaving) {
-                  return;
-                }
-
                 void (async () => {
                   setIsSaving(true);
 

@@ -1,9 +1,0 @@
-{
-  "platforms": ["ios", "android"],
-  "ios": {
-    "modules": ["SignsHandLandmarkerModule"]
-  },
-  "android": {
-    "modules": ["expo.modules.signshandlandmarker.SignsHandLandmarkerModule"]
-  }
-}

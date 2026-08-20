@@ -25,9 +25,8 @@ export default function PrivacyScreen() {
           your practice days. Notification permission is optional.
         </Text>
         <Text style={styles.body}>
-          Practice Mirror uses the camera only on device for side-by-side
-          comparison with illustrations. Camera frames are not uploaded in this
-          version.
+          If you set a profile photo from the camera, that access stays on device
+          and is not uploaded in this version.
         </Text>
         <Text style={styles.body}>
           You can export or reset your local data from Profile. Contact the

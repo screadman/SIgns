@@ -359,26 +359,6 @@ export default function PracticeModeScreen() {
                   <Ionicons name="text-outline" size={18} color={colors.text} />
                 </Pressable>
 
-                <Pressable
-                  onPress={() => router.push('/practice/mirror' as Href)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Practice Mirror"
-                  style={({ pressed }) => [
-                    styles.row,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <View
-                    style={[styles.rowSwatch, { backgroundColor: '#0EA5E9' }]}
-                  />
-                  <View style={styles.rowCopy}>
-                    <Text style={styles.rowTitle}>Practice Mirror</Text>
-                    <Text style={styles.rowSubtitle}>
-                      Camera + illustration side by side. You self-check.
-                    </Text>
-                  </View>
-                  <Ionicons name="camera-outline" size={18} color={colors.text} />
-                </Pressable>
               </View>
 
               <Text style={styles.sectionTitle}>Choose a collection</Text>
