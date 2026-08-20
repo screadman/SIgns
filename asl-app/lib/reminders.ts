@@ -14,8 +14,8 @@ import { Platform } from 'react-native';
 
 import { requestPermissionsAsync } from 'expo-notifications/build/NotificationPermissions';
 import { setNotificationHandler } from 'expo-notifications/build/NotificationsHandler';
-import { scheduleNotificationAsync } from 'expo-notifications/build/scheduleNotificationAsync';
-import { cancelScheduledNotificationAsync } from 'expo-notifications/build/cancelScheduledNotificationAsync';
+import scheduleNotificationAsync from 'expo-notifications/build/scheduleNotificationAsync';
+import cancelScheduledNotificationAsync from 'expo-notifications/build/cancelScheduledNotificationAsync';
 import { SchedulableTriggerInputTypes } from 'expo-notifications/build/Notifications.types';
 
 import {
