@@ -79,10 +79,6 @@ export default function RootLayout() {
           options={{ animation: 'slide_from_right' }}
         />
         <Stack.Screen
-          name="practice/mirror"
-          options={{ animation: 'slide_from_right' }}
-        />
-        <Stack.Screen
           name="legal/privacy"
           options={{ animation: 'slide_from_right' }}
         />

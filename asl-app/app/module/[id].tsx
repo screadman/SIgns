@@ -402,27 +402,6 @@ export default function ModuleScreen() {
             <>
               <Text style={styles.sectionTitle}>Lesson path</Text>
               <LearningPath items={pathItems} size="md" layout="pairs" />
-              {lessonPath.currentLesson ? (
-                <Pressable
-                  style={styles.mirrorCta}
-                  onPress={() =>
-                    router.push(
-                      `/practice/mirror?lessonId=${encodeURIComponent(lessonPath.currentLesson!.id)}` as Href,
-                    )
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel="Open Practice Mirror for current sign"
-                >
-                  <Ionicons
-                    name="camera-outline"
-                    size={18}
-                    color={colors.primary}
-                  />
-                  <Text style={styles.mirrorCtaText}>
-                    Mirror this sign
-                  </Text>
-                </Pressable>
-              ) : null}
             </>
           )}
         </ScrollView>
@@ -545,20 +524,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontFamily: fontFamily.bodyMedium,
     fontSize: fontSize.xs,
-  },
-  mirrorCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    minHeight: 48,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.primarySurface,
-  },
-  mirrorCtaText: {
-    color: colors.primary,
-    fontFamily: fontFamily.heading,
-    fontSize: fontSize.base,
   },
   notFound: {
     flex: 1,
