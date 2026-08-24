@@ -29,6 +29,8 @@ export type DailyChallengeDef = {
   title: string;
   target: number;
   rewardXp: number;
+  /** Gems (stars currency) granted when the user claims the reward. */
+  rewardGems: number;
 };
 
 export const DAILY_CHALLENGES: DailyChallengeDef[] = [
@@ -37,18 +39,21 @@ export const DAILY_CHALLENGES: DailyChallengeDef[] = [
     title: 'Learn 5 new signs',
     target: 5,
     rewardXp: 50,
+    rewardGems: 15,
   },
   {
     id: 'quizzesFinished',
     title: 'Finish 1 quiz',
     target: 1,
     rewardXp: 30,
+    rewardGems: 10,
   },
   {
     id: 'correctAnswers',
     title: 'Get 10 correct answers',
     target: 10,
     rewardXp: 40,
+    rewardGems: 12,
   },
 ];
 
@@ -88,7 +93,7 @@ export const PRACTICE_MODES: PracticeMode[] = [
   {
     id: 'challenges',
     title: 'Challenges',
-    description: 'Daily goals with XP rewards. Resets each day.',
+    description: 'Daily goals with XP and gem rewards. Resets each day.',
     icon: 'trophy-outline',
     tileColor: '#F59E0B',
     available: true,

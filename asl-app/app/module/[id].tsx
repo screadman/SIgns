@@ -84,7 +84,7 @@ function SignGridCard({
       accessibilityLabel={`${lesson.title}${isCompleted ? ', completed' : ''}${
         isFavorite ? ', favorite' : ''
       }`}
-      style={({ pressed }) => [styles.signCard, pressed && styles.pressed]}
+      style={styles.signCard}
     >
       <SignGlassFrame style={styles.signMedia}>
         {hasImage && imageSource ? (
@@ -328,10 +328,9 @@ export default function ModuleScreen() {
             onPress={() => setBrowseMode((value) => !value)}
             accessibilityRole="button"
             accessibilityLabel={browseMode ? 'Show learning path' : 'Search and browse'}
-            style={({ pressed }) => [
+            style={[
               styles.modeChip,
               browseMode && styles.modeChipActive,
-              pressed && styles.pressed,
             ]}
           >
             <Ionicons
@@ -403,27 +402,6 @@ export default function ModuleScreen() {
             <>
               <Text style={styles.sectionTitle}>Lesson path</Text>
               <LearningPath items={pathItems} size="md" layout="pairs" />
-              {lessonPath.currentLesson ? (
-                <Pressable
-                  style={styles.mirrorCta}
-                  onPress={() =>
-                    router.push(
-                      `/practice/mirror?lessonId=${encodeURIComponent(lessonPath.currentLesson!.id)}` as Href,
-                    )
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel="Open Practice Mirror for current sign"
-                >
-                  <Ionicons
-                    name="camera-outline"
-                    size={18}
-                    color={colors.primary}
-                  />
-                  <Text style={styles.mirrorCtaText}>
-                    Mirror this sign
-                  </Text>
-                </Pressable>
-              ) : null}
             </>
           )}
         </ScrollView>
@@ -509,10 +487,12 @@ const styles = StyleSheet.create({
   },
   signCard: {
     width: '31%',
-    flexGrow: 1,
+    flexBasis: '31%',
+    flexGrow: 0,
     maxWidth: '32%',
   },
   signMedia: {
+    width: '100%',
     aspectRatio: 1,
     borderRadius: borderRadius.lg,
   },
@@ -544,20 +524,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontFamily: fontFamily.bodyMedium,
     fontSize: fontSize.xs,
-  },
-  mirrorCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    minHeight: 48,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.primarySurface,
-  },
-  mirrorCtaText: {
-    color: colors.primary,
-    fontFamily: fontFamily.heading,
-    fontSize: fontSize.base,
   },
   notFound: {
     flex: 1,

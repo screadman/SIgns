@@ -1,42 +1,71 @@
-# SIgns
-Signs mobile app that makes learning sign language accessible to everyone through an interactive dictionary and structured, bite-sized lessons.
-Built with React Native by a team of two.
+# SIGNS
+
+A mobile app that makes learning American Sign Language (ASL) accessible and fun: a free-browse visual dictionary, gamified quizzes, streaks, and personalized push notifications, built entirely offline-first with no backend required.
+
+Built with: React Native, Expo Router, TypeScript, NativeWind
+
+---
+
+## What it does
+
+SIGNS lets anyone learn ASL through a searchable visual dictionary covering 12 categories (alphabet, numbers, everyday conversation, emotions, and more), reinforced by interactive quizzes with a streak-and-XP progression system inspired by Duolingo.
+
+- Visual dictionary: 12 vocabulary categories, instant search, favorites
+- Adaptive quizzes: multiple-choice practice generated dynamically per lesson
+- Real progress tracking: streaks and XP computed from actual usage history, not simulated counters
+- Achievements: badge system tied to real milestones
+- Smart reminders: local push notifications that adapt their message to the user's live streak count
+- Fully offline: zero backend dependency; all state lives on-device via AsyncStorage
+
+---
+
+## Technical highlights
+
+A few things worth a closer look in the codebase:
+
+- File-based routing architecture using Expo Router, with route groups separating tab navigation, auth, and modal-style flows without polluting the URL structure
+- Automated asset pipeline: a Node script (scripts/gen-asl-image-maps.js) scans image folders and regenerates typed image lookup maps, so adding new illustrated content never requires touching TypeScript by hand
+- Streak-aware notification content: reminder copy is generated at schedule time using the user's real, calculated streak (not hardcoded), then re-synced on every app launch to stay current
+- Defensive data handling: progress data read from local storage is validated and deduplicated before use, so corrupted or partial AsyncStorage state degrades gracefully instead of crashing
+
+---
+
+## Tech stack
+
+| Layer | Tools |
+|---|---|
+| Framework | React Native (Expo SDK 57) |
+| Navigation | Expo Router |
+| Styling | NativeWind (Tailwind) and StyleSheet |
+| Language | TypeScript |
+| Local persistence | AsyncStorage |
+| Native features | expo-notifications, expo-camera, expo-image-picker |
+| Animation | react-native-reanimated |
+
+---
+
+## Running it locally
+
+```bash
+npm install
+npx expo start
+```
+
+Scan the QR code with the Expo Go app (iOS/Android), or press w for the web preview.
+
+---
+
+## Team
+
+Built by Rayann Sagnon and Steven Atchall as a collaborative side project.
+
+<table>
+  <tr>
+    <td><img width="220" alt="Écran 1" src="https://github.com/user-attachments/assets/98204ba1-6173-471f-9f65-f2ebe3b160b1" /></td>
+    <td><img width="220" alt="Écran 2" src="https://github.com/user-attachments/assets/ebc8585b-622f-4df3-9b64-d5f3aaddd46e" /></td>
+    <td><img width="220" alt="Écran 3" src="https://github.com/user-attachments/assets/f96b7197-5b94-4108-8149-07ada9ecd2b2" /></td>
+  </tr>
+</table>
 
 
-# About the Project
 
-Most language learning apps focus on spoken languages, leaving sign languages underserved despite millions of users worldwide. 
-Signs bridges that gap by offering a mobile-first learning experience built around two core pillars:
-- A visual dictionary: search any word and instantly see how to sign it, with clear demonstrations and descriptions.
-- Structured lessons: progress through curated lessons that build vocabulary step by step, from everyday greetings to full conversational signing.
-
-
-The goal: make sign language as easy to start learning as any spoken language.
-
-# Features 
-- Sign Dictionary:
-    - Search signs by keyword or browse by category
-    - Detailed descriptions of hand shape, movement, and placement
-    - Favorites system to save signs for quick review
-
-- Interactive Lessons:
-    - Progressive lesson paths organized by difficulty
-    - Multiple exercise types: recognition, matching, and recall
-    - Progress tracking
-    - Completion streaks to keep learners motivated
-
-# tech stack 
-
-Mobile App              React Native
-Navigation              React Navigation
-State Management        Zustand 
-Backend / API           Node.js
-Database                PostgreSQL 
-
-Why React Native?
-We chose React Native to ship a single codebase to both iOS and Android, letting a two-person team move fast without sacrificing native performance. Its component model also maps naturally to our lesson and dictionary UI, which is highly reusable across screens.
-
-
-# team 
-Steven ATCHALL (@screadman)
-Rayann Sagnon  (@RayannSagnon)
